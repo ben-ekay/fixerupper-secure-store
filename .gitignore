@@ -15,3 +15,7 @@ uploads/products/*
 
 # Keep the uploads folder in Git
 !uploads/products/.gitkeep
+
+# Formative assessment evidence (not part of Summative)
+NovaStore*.mov
+NovaStore*_Evidence.docx

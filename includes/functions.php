@@ -216,8 +216,7 @@ function upload_product_image(array $file): ?string
 
 function delete_product_image(
     ?string $imageUrl
-): void
-{
+): void {
     if (!$imageUrl) {
         return;
     }
@@ -455,6 +454,122 @@ function flash_get(): ?array
 
     return $flash;
 }
+
+/*
+|--------------------------------------------------------------------------
+| SHOPPING CART
+|--------------------------------------------------------------------------
+*/
+
+/**
+ * Return all products currently stored in the cart.
+ */
+function cart_items(): array
+{
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
+    return $_SESSION['cart'] ?? [];
+}
+
+
+/**
+ * Return the total number of units in the cart.
+ */
+function cart_count(): int
+{
+    return array_sum(
+        cart_items()
+    );
+}
+
+
+/**
+ * Add a product to the cart.
+ */
+function cart_add(
+    int $productId,
+    int $quantity = 1
+): void {
+
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
+    if (
+        $productId <= 0
+        || $quantity <= 0
+    ) {
+        return;
+    }
+
+    if (!isset($_SESSION['cart'])) {
+        $_SESSION['cart'] = [];
+    }
+
+    if (isset($_SESSION['cart'][$productId])) {
+
+        $_SESSION['cart'][$productId] += $quantity;
+    } else {
+
+        $_SESSION['cart'][$productId] = $quantity;
+    }
+}
+
+/*
+|--------------------------------------------------------------------------
+| REMOVE PRODUCT FROM CART
+|--------------------------------------------------------------------------
+*/
+
+function cart_remove(int $productId): void
+{
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
+    if ($productId <= 0) {
+        return;
+    }
+
+    if (isset($_SESSION['cart'][$productId])) {
+        unset($_SESSION['cart'][$productId]);
+    }
+}
+
+/*
+|--------------------------------------------------------------------------
+| UPDATE CART QUANTITY
+|--------------------------------------------------------------------------
+*/
+
+function cart_update(
+    int $productId,
+    int $quantity
+): void {
+
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
+    if ($productId <= 0) {
+        return;
+    }
+
+    if ($quantity <= 0) {
+        cart_remove($productId);
+        return;
+    }
+
+    if (!isset($_SESSION['cart'][$productId])) {
+        return;
+    }
+
+    $_SESSION['cart'][$productId] = $quantity;
+}
+
+
 function abort_request(
     int $statusCode,
     string $message
@@ -704,7 +819,7 @@ function build_admin_filter_url(
     $filters = array_filter(
         $filters,
         static fn($value) =>
-            $value !== ''
+        $value !== ''
             && $value !== null
     );
 

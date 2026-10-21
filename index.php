@@ -173,19 +173,19 @@ if ($categoryId) {
 $orderBy = match ($sort) {
 
     'price_asc' =>
-        'p.price ASC, p.id DESC',
+    'p.price ASC, p.id DESC',
 
     'price_desc' =>
-        'p.price DESC, p.id DESC',
+    'p.price DESC, p.id DESC',
 
     'name_asc' =>
-        'p.name ASC, p.id DESC',
+    'p.name ASC, p.id DESC',
 
     'name_desc' =>
-        'p.name DESC, p.id DESC',
+    'p.name DESC, p.id DESC',
 
     default =>
-        'p.created_at DESC, p.id DESC',
+    'p.created_at DESC, p.id DESC',
 };
 
 $sql .= '
@@ -247,7 +247,6 @@ if (
 
     $catalogSubtitle .=
         ' found in ' . $activeCategoryName;
-
 } elseif ($search !== '') {
 
     $catalogSubtitle .=
@@ -443,8 +442,7 @@ $resetSortUrl .=
 
 <section
     class="catalog-section"
-    id="catalog"
->
+    id="catalog">
 
 
     <!-- ==================================================
@@ -455,9 +453,8 @@ $resetSortUrl .=
 
         <div
             class="flash flash-<?= htmlspecialchars(
-                $flash['type']
-            ) ?>"
-        >
+                                    $flash['type']
+                                ) ?>">
             <?= htmlspecialchars(
                 $flash['message']
             ) ?>
@@ -505,19 +502,19 @@ $resetSortUrl .=
 
                         Showing results for
                         "<strong><?= htmlspecialchars(
-                            $search
-                        ) ?></strong>"
+                                        $search
+                                    ) ?></strong>"
                         in
                         <strong><?= htmlspecialchars(
-                            $activeCategoryName
-                        ) ?></strong>
+                                    $activeCategoryName
+                                ) ?></strong>
 
                     <?php elseif ($search !== ''): ?>
 
                         Showing results for
                         "<strong><?= htmlspecialchars(
-                            $search
-                        ) ?></strong>"
+                                        $search
+                                    ) ?></strong>"
 
                     <?php elseif (
                         $activeCategoryName !== null
@@ -525,8 +522,8 @@ $resetSortUrl .=
 
                         Showing category
                         <strong><?= htmlspecialchars(
-                            $activeCategoryName
-                        ) ?></strong>
+                                    $activeCategoryName
+                                ) ?></strong>
 
                     <?php endif; ?>
 
@@ -554,12 +551,11 @@ $resetSortUrl .=
 
             <a
                 href="<?= htmlspecialchars(
-                    $allProductsUrl
-                ) ?>"
+                            $allProductsUrl
+                        ) ?>"
                 class="category-chip <?= !$categoryId
-                    ? 'active'
-                    : '' ?>"
-            >
+                                            ? 'active'
+                                            : '' ?>">
                 All
             </a>
 
@@ -585,12 +581,11 @@ $resetSortUrl .=
 
                 <a
                     href="<?= htmlspecialchars(
-                        $categoryUrl
-                    ) ?>"
+                                $categoryUrl
+                            ) ?>"
                     class="category-chip <?= $categoryId === (int) $category['id']
-                        ? 'active'
-                        : '' ?>"
-                >
+                                                ? 'active'
+                                                : '' ?>">
                     <?= htmlspecialchars(
                         $category['name']
                     ) ?>
@@ -608,8 +603,7 @@ $resetSortUrl .=
         <form
             class="search-form-premium"
             action="/product-catalog/index.php#catalog"
-            method="get"
-        >
+            method="get">
 
 
             <?php if ($categoryId): ?>
@@ -617,8 +611,7 @@ $resetSortUrl .=
                 <input
                     type="hidden"
                     name="category"
-                    value="<?= (int) $categoryId ?>"
-                >
+                    value="<?= (int) $categoryId ?>">
 
             <?php endif; ?>
 
@@ -628,27 +621,24 @@ $resetSortUrl .=
                 name="q"
                 placeholder="Search products..."
                 value="<?= htmlspecialchars(
-                    $search
-                ) ?>"
+                            $search
+                        ) ?>"
                 class="<?= $search !== ''
-                    ? 'search-active'
-                    : '' ?>"
-                aria-label="Search products"
-            >
+                            ? 'search-active'
+                            : '' ?>"
+                aria-label="Search products">
 
 
             <select
                 name="sort"
                 aria-label="Sort products"
-                onchange="this.form.submit()"
-            >
+                onchange="this.form.submit()">
 
                 <option
                     value="newest"
                     <?= $sort === 'newest'
                         ? 'selected'
-                        : '' ?>
-                >
+                        : '' ?>>
                     Newest
                 </option>
 
@@ -656,8 +646,7 @@ $resetSortUrl .=
                     value="price_asc"
                     <?= $sort === 'price_asc'
                         ? 'selected'
-                        : '' ?>
-                >
+                        : '' ?>>
                     Price: Low to High
                 </option>
 
@@ -665,8 +654,7 @@ $resetSortUrl .=
                     value="price_desc"
                     <?= $sort === 'price_desc'
                         ? 'selected'
-                        : '' ?>
-                >
+                        : '' ?>>
                     Price: High to Low
                 </option>
 
@@ -674,8 +662,7 @@ $resetSortUrl .=
                     value="name_asc"
                     <?= $sort === 'name_asc'
                         ? 'selected'
-                        : '' ?>
-                >
+                        : '' ?>>
                     Name: A–Z
                 </option>
 
@@ -683,8 +670,7 @@ $resetSortUrl .=
                     value="name_desc"
                     <?= $sort === 'name_desc'
                         ? 'selected'
-                        : '' ?>
-                >
+                        : '' ?>>
                     Name: Z–A
                 </option>
 
@@ -700,10 +686,9 @@ $resetSortUrl .=
 
                 <a
                     href="<?= htmlspecialchars(
-                        $clearSearchUrl
-                    ) ?>"
-                    class="clear-search"
-                >
+                                $clearSearchUrl
+                            ) ?>"
+                    class="clear-search">
                     Clear search
                 </a>
 
@@ -717,10 +702,9 @@ $resetSortUrl .=
 
                 <a
                     href="<?= htmlspecialchars(
-                        $clearCategoryUrl
-                    ) ?>"
-                    class="clear-search"
-                >
+                                $clearCategoryUrl
+                            ) ?>"
+                    class="clear-search">
                     Clear category
                 </a>
 
@@ -731,10 +715,9 @@ $resetSortUrl .=
 
                 <a
                     href="<?= htmlspecialchars(
-                        $resetSortUrl
-                    ) ?>"
-                    class="clear-search"
-                >
+                                $resetSortUrl
+                            ) ?>"
+                    class="clear-search">
                     Reset sort
                 </a>
 
@@ -768,20 +751,20 @@ $resetSortUrl .=
 
                     No products match
                     "<strong><?= htmlspecialchars(
-                        $search
-                    ) ?></strong>"
+                                    $search
+                                ) ?></strong>"
                     in
                     <strong><?= htmlspecialchars(
-                        $activeCategoryName
-                    ) ?></strong>.
+                                $activeCategoryName
+                            ) ?></strong>.
 
 
                 <?php elseif ($search !== ''): ?>
 
                     No products match
                     "<strong><?= htmlspecialchars(
-                        $search
-                    ) ?></strong>".
+                                    $search
+                                ) ?></strong>".
 
 
                 <?php elseif (
@@ -791,8 +774,8 @@ $resetSortUrl .=
 
                     There are no products in
                     <strong><?= htmlspecialchars(
-                        $activeCategoryName
-                    ) ?></strong>.
+                                $activeCategoryName
+                            ) ?></strong>.
 
 
                 <?php else: ?>
@@ -806,8 +789,7 @@ $resetSortUrl .=
 
             <a
                 href="/product-catalog/index.php#catalog"
-                class="empty-button"
-            >
+                class="empty-button">
                 View All Products
             </a>
 
@@ -843,39 +825,66 @@ $resetSortUrl .=
                          PRODUCT IMAGE
                     ================================================== -->
 
-                    <div class="card-image">
+                    <div class="card-image <?= match ($product['name']) {
+                                                'Wireless Mouse' => 'mouse-image',
+                                                'Notebook Set' => 'notebook-image',
+                                                'Ceramic Mug' => 'mug-image',
+                                                default => ''
+                                            } ?>">
 
                         <a
                             href="/product-catalog/product.php?id=<?= (int) $product['id'] ?>"
                             class="card-image-link"
                             aria-label="View <?= htmlspecialchars(
-                                $product['name']
-                            ) ?>"
-                        >
+                                                    $product['name']
+                                                ) ?>">
 
                             <img
                                 src="<?= htmlspecialchars(
-                                    $product['image_url']
-                                    ?: 'https://placehold.co/600x450?text=No+Image'
-                                ) ?>"
+                                            $product['image_url']
+                                                ?: 'https://placehold.co/600x450?text=No+Image'
+                                        ) ?>"
                                 alt="<?= htmlspecialchars(
-                                    $product['name']
-                                ) ?>"
-                            >
+                                            $product['name']
+                                        ) ?>">
 
                         </a>
 
+                    </div>
+
+                    <!-- ==================================================
+                          PRODUCT CONTENT
+                    ================================================== -->
+
+                    <div class="card-body">
+
+
+                        <h3>
+
+                            <a
+                                href="/product-catalog/product.php?id=<?= (int) $product['id'] ?>"
+                                class="card-title-link">
+                                <?= htmlspecialchars(
+                                    $product['name']
+                                ) ?>
+                            </a>
+
+                        </h3>
+
+
+                        <p>
+                            <?= htmlspecialchars(
+                                $product['description']
+                            ) ?>
+                        </p>
 
                         <!-- ==================================================
-                             BADGES
-                        ================================================== -->
+                                  PRODUCT BADGES
+                            ================================================== -->
 
                         <div class="card-badges">
 
-
-                            <?php if (
-                                (int) $product['featured'] === 1
-                            ): ?>
+                            <?php if ((int) $product['featured'] === 1): ?>
 
                                 <span class="badge badge-featured">
                                     Featured
@@ -892,73 +901,39 @@ $resetSortUrl .=
                                 <?php
 
                                 $badgeParams = [
-                                    'category' =>
-                                        (int) $product['category_id'],
+                                    'category' => (int) $product['category_id'],
                                 ];
 
                                 if ($search !== '') {
-                                    $badgeParams['q'] =
-                                        $search;
+                                    $badgeParams['q'] = $search;
                                 }
 
                                 if ($sort !== 'newest') {
-                                    $badgeParams['sort'] =
-                                        $sort;
+                                    $badgeParams['sort'] = $sort;
                                 }
 
                                 $badgeUrl =
                                     '/product-catalog/index.php?'
-                                    . http_build_query(
-                                        $badgeParams
-                                    )
+                                    . http_build_query($badgeParams)
                                     . '#catalog';
 
                                 ?>
 
                                 <a
-                                    href="<?= htmlspecialchars(
-                                        $badgeUrl
-                                    ) ?>"
-                                    class="badge badge-category badge-category-link"
-                                >
+                                    href="<?= htmlspecialchars($badgeUrl) ?>"
+                                    class="badge badge-category badge-category-link">
+
                                     <?= htmlspecialchars(
                                         $product['category_name']
                                     ) ?>
+
                                 </a>
 
                             <?php endif; ?>
 
                         </div>
 
-                    </div>
 
-
-                    <!-- ==================================================
-                         PRODUCT CONTENT
-                    ================================================== -->
-
-                    <div class="card-body">
-
-
-                        <h3>
-
-                            <a
-                                href="/product-catalog/product.php?id=<?= (int) $product['id'] ?>"
-                                class="card-title-link"
-                            >
-                                <?= htmlspecialchars(
-                                    $product['name']
-                                ) ?>
-                            </a>
-
-                        </h3>
-
-
-                        <p>
-                            <?= htmlspecialchars(
-                                $product['description']
-                            ) ?>
-                        </p>
 
 
                         <!-- ==================================================
@@ -969,9 +944,8 @@ $resetSortUrl .=
 
                             <span
                                 class="stock <?= htmlspecialchars(
-                                    $stockStatus['class']
-                                ) ?>"
-                            >
+                                                    $stockStatus['class']
+                                                ) ?>">
                                 <?= htmlspecialchars(
                                     $stockStatus['label']
                                 ) ?>
@@ -988,17 +962,55 @@ $resetSortUrl .=
 
                             <span class="price">
                                 £<?= number_format(
-                                    (float) $product['price'],
-                                    2
-                                ) ?>
+                                        (float) $product['price'],
+                                        2
+                                    ) ?>
                             </span>
 
-                            <a
-                                href="/product-catalog/product.php?id=<?= (int) $product['id'] ?>"
-                                class="view-product"
-                            >
-                                View →
-                            </a>
+                            <div class="card-actions">
+
+                                <a
+                                    href="/product-catalog/product.php?id=<?= (int) $product['id'] ?>"
+                                    class="view-product">
+                                    View →
+                                </a>
+
+                                <?php if ((int) $product['stock'] > 0): ?>
+
+                                    <form
+                                        action="/product-catalog/add-to-cart.php"
+                                        method="post">
+
+                                        <input
+                                            type="hidden"
+                                            name="csrf_token"
+                                            value="<?= htmlspecialchars(csrf_token()) ?>">
+
+                                        <input
+                                            type="hidden"
+                                            name="product_id"
+                                            value="<?= (int) $product['id'] ?>">
+
+                                        <button
+                                            type="submit"
+                                            class="add-to-cart-button">
+                                            Add to Cart
+                                        </button>
+
+                                    </form>
+
+                                <?php else: ?>
+
+                                    <button
+                                        type="button"
+                                        class="add-to-cart-button"
+                                        disabled>
+                                        Sold Out
+                                    </button>
+
+                                <?php endif; ?>
+
+                            </div>
 
                         </div>
 

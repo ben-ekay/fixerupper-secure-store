@@ -26,6 +26,7 @@ $isCategories =
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -33,90 +34,89 @@ $isCategories =
     <title>NovaStore | Product Catalog</title>
 
     <link
+
         rel="stylesheet"
-        href="/product-catalog/assets/css/style.css"
-    >
+
+        href="/product-catalog/assets/css/style.css?v=14">
 </head>
 
 <body>
 
-<header class="site-header">
+    <header class="site-header">
 
-    <div class="header-container">
+        <div class="header-container">
 
-        <a
-            class="brand"
-            href="/product-catalog/index.php"
-        >
+            <a
+                class="brand"
+                href="/product-catalog/index.php">
 
-            <span class="brand-mark">
-                N
-            </span>
+                <span class="brand-mark">
+                    N
+                </span>
 
-            <span class="brand-text">
-                NovaStore
-            </span>
+                <span class="brand-text">
+                    NovaStore
+                </span>
 
-        </a>
+            </a>
 
-        <nav class="main-nav">
+            <nav class="main-nav">
 
-    <a
-        href="/product-catalog/index.php"
-        class="<?= $isProducts ? 'nav-active' : '' ?>"
-    >
-        Products
-    </a>
+                <a
+                    href="/product-catalog/cart.php"
+                    class="<?= $currentPath === '/product-catalog/cart.php' ? 'nav-active' : '' ?> cart-nav-link">
+                    Cart
 
-    <?php if (admin_is_logged_in()): ?>
+                    <?php if (cart_count() > 0): ?>
+                        <span class="cart-count">
+                            <?= (int) cart_count() ?>
+                        </span>
+                    <?php endif; ?>
+                </a>
 
-        <a
-            href="/product-catalog/admin/"
-            class="<?= $isDashboard ? 'nav-active' : '' ?>"
-        >
-            Dashboard
-        </a>
+                <?php if (admin_is_logged_in()): ?>
 
-        <a
-            href="/product-catalog/admin/categories.php"
-            class="<?= $isCategories ? 'nav-active' : '' ?>"
-        >
-            Categories
-        </a>
+                    <a
+                        href="/product-catalog/admin/"
+                        class="<?= $isDashboard ? 'nav-active' : '' ?>">
+                        Dashboard
+                    </a>
 
-        <form
-    method="post"
-    action="/product-catalog/admin/logout.php"
-    class="nav-logout-form"
->
-    <input
-        type="hidden"
-        name="csrf_token"
-        value="<?= htmlspecialchars(csrf_token()) ?>"
-    >
+                    <a
+                        href="/product-catalog/admin/categories.php"
+                        class="<?= $isCategories ? 'nav-active' : '' ?>">
+                        Categories
+                    </a>
 
-    <button
-        type="submit"
-        class="nav-link-button"
-    >
-        Log out
-    </button>
-</form>
+                    <form
+                        method="post"
+                        action="/product-catalog/admin/logout.php"
+                        class="nav-logout-form">
+                        <input
+                            type="hidden"
+                            name="csrf_token"
+                            value="<?= htmlspecialchars(csrf_token()) ?>">
 
-    <?php else: ?>
+                        <button
+                            type="submit"
+                            class="nav-link-button">
+                            Log out
+                        </button>
+                    </form>
 
-        <a
-            href="/product-catalog/admin/login.php"
-        >
-            Log in
-        </a>
+                <?php else: ?>
 
-    <?php endif; ?>
+                    <a
+                        href="/product-catalog/admin/login.php">
+                        Log in
+                    </a>
 
-</nav>
+                <?php endif; ?>
 
-    </div>
+            </nav>
 
-</header>
+        </div>
 
-<main class="main-content">
+    </header>
+
+    <main class="main-content">
