@@ -2,6 +2,9 @@
 
 require __DIR__ . '/includes/functions.php';
 
+// Administrators cannot use the cart (see require_shopper()).
+require_shopper();
+
 /*
 |--------------------------------------------------------------------------
 | ONLY ALLOW POST REQUESTS
@@ -61,6 +64,6 @@ if (isset($cart[$productId])) {
 |--------------------------------------------------------------------------
 */
 
-header('Location: /product-catalog/cart.php');
+header('Location: ' . url('cart.php'));
 
 exit;

@@ -1,10 +1,56 @@
 <?php
 
+require_once __DIR__ . '/../config/app.php';
+require_once __DIR__ . '/errors.php';
+require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/session.php';
+require_once __DIR__ . '/security-headers.php';
+require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/orders.php';
+
+send_security_headers();
+
+/**
+ * Build a site URL from a path relative to the project root.
+ *
+ * url('cart.php')  ->  /fixerupper-summative/cart.php
+ * url()            ->  /fixerupper-summative/
+ */
+function url(string $path = ''): string
+{
+    return BASE_URL . '/' . ltrim($path, '/');
+}
+
+/**
+ * Return $returnUrl only if it points inside the admin area,
+ * otherwise return ''. Prevents open redirects to other sites.
+ */
+function safe_admin_return_url(mixed $returnUrl): string
+{
+    // Request values can be arrays (?return[]=x), so accept strings only.
+    if (!is_string($returnUrl)) {
+        return '';
+    }
+
+    $returnUrl = trim($returnUrl);
+
+    // Reject line breaks and backslashes (header and path tricks).
+    if (preg_match('/[\r\n\\\\]/', $returnUrl)) {
+        return '';
+    }
+
+    // Must be a local path that starts with /fixerupper-summative/admin/.
+    // A full URL (https://evil.com) or //evil.com can never match.
+    if (!str_starts_with($returnUrl, url('admin/'))) {
+        return '';
+    }
+
+    return $returnUrl;
+}
+
 function csrf_token(): string
 {
-    if (session_status() === PHP_SESSION_NONE) {
-        session_start();
-    }
+    start_secure_session();
 
     if (
         empty($_SESSION['csrf_token'])
@@ -16,16 +62,16 @@ function csrf_token(): string
     return $_SESSION['csrf_token'];
 }
 
-function csrf_validate(?string $token): bool
+function csrf_validate(mixed $token): bool
 {
-    if (session_status() === PHP_SESSION_NONE) {
-        session_start();
-    }
+    start_secure_session();
 
+    // Request values can be arrays (csrf_token[]=x), so accept strings only.
     if (
         empty($_SESSION['csrf_token'])
         || !is_string($_SESSION['csrf_token'])
-        || empty($token)
+        || !is_string($token)
+        || $token === ''
     ) {
         return false;
     }
@@ -35,63 +81,7 @@ function csrf_validate(?string $token): bool
         $token
     );
 }
-function admin_login(array $user): void
-{
-    if (session_status() === PHP_SESSION_NONE) {
-        session_start();
-    }
 
-    session_regenerate_id(true);
-
-    $_SESSION['admin_user'] = [
-        'id' => (int) $user['id'],
-        'name' => $user['name'],
-        'email' => $user['email'],
-        'role' => $user['role']
-    ];
-}
-
-function admin_logout(): void
-{
-    if (session_status() === PHP_SESSION_NONE) {
-        session_start();
-    }
-
-    $_SESSION = [];
-
-    if (ini_get('session.use_cookies')) {
-        $params = session_get_cookie_params();
-
-        setcookie(
-            session_name(),
-            '',
-            time() - 42000,
-            $params['path'],
-            $params['domain'],
-            $params['secure'],
-            $params['httponly']
-        );
-    }
-
-    session_destroy();
-}
-
-function admin_is_logged_in(): bool
-{
-    if (session_status() === PHP_SESSION_NONE) {
-        session_start();
-    }
-
-    return isset($_SESSION['admin_user']['id']);
-}
-
-function require_admin(): void
-{
-    if (!admin_is_logged_in()) {
-        header('Location: /product-catalog/admin/login.php');
-        exit;
-    }
-}
 function get_categories(PDO $pdo): array
 {
     $stmt = $pdo->query(
@@ -105,6 +95,77 @@ function get_categories(PDO $pdo): array
 
     return $stmt->fetchAll();
 }
+/**
+ * The storefront departments with their real product counts, plus one
+ * product photo from each department to use on its tile.
+ */
+function get_store_departments(PDO $pdo): array
+{
+    $placeholders = implode(',', array_fill(0, count(STOREFRONT_DEPARTMENTS), '?'));
+
+    $stmt = $pdo->prepare(
+        "SELECT
+            c.id,
+            c.name,
+            c.slug,
+            COUNT(p.id) AS product_count,
+            (SELECT p2.image_url
+             FROM products p2
+             WHERE p2.category_id = c.id
+               AND p2.is_active = 1
+               AND p2.image_url IS NOT NULL
+             ORDER BY p2.featured DESC, p2.id ASC
+             LIMIT 1) AS image_url
+         FROM categories c
+         LEFT JOIN products p ON p.category_id = c.id AND p.is_active = 1
+         WHERE c.slug IN ($placeholders)
+         GROUP BY c.id, c.name, c.slug"
+    );
+
+    $stmt->execute(STOREFRONT_DEPARTMENTS);
+
+    $departments = $stmt->fetchAll();
+
+    usort(
+        $departments,
+        fn(array $a, array $b): int =>
+            array_search($a['slug'], STOREFRONT_DEPARTMENTS, true)
+            <=> array_search($b['slug'], STOREFRONT_DEPARTMENTS, true)
+    );
+
+    return $departments;
+}
+
+/**
+ * Whether a product (from get_product_by_id) can currently be bought.
+ */
+function product_is_on_sale(array $product): bool
+{
+    return (int) $product['is_active'] === 1;
+}
+
+/**
+ * The product's photo, or the local labelled placeholder if it has none.
+ */
+function product_image_url(?string $imageUrl): string
+{
+    return $imageUrl ?: url('assets/images/product-placeholder.svg');
+}
+
+/**
+ * Stock wording for customers, always based on the real stock figure.
+ */
+function stock_summary(int $stock): string
+{
+    if ($stock <= 0) {
+        return 'Out of stock';
+    }
+
+    return $stock <= 5
+        ? 'Low stock · ' . $stock . ' left'
+        : 'In stock · ' . $stock . ' available';
+}
+
 function get_stock_status(int $stock): array
 {
     if ($stock <= 0) {
@@ -208,9 +269,7 @@ function upload_product_image(array $file): ?string
         );
     }
 
-    return
-        '/product-catalog/uploads/products/'
-        . $filename;
+    return url('uploads/products/' . $filename);
 }
 
 
@@ -221,8 +280,7 @@ function delete_product_image(
         return;
     }
 
-    $prefix =
-        '/product-catalog/uploads/products/';
+    $prefix = url('uploads/products/');
 
     if (!str_starts_with($imageUrl, $prefix)) {
         return;
@@ -298,6 +356,7 @@ function product_values_from_request(): array
         'price' => trim($_POST['price'] ?? ''),
         'stock' => trim($_POST['stock'] ?? ''),
         'featured' => isset($_POST['featured']) ? '1' : '0',
+        'is_active' => isset($_POST['is_active']) ? '1' : '0',
     ];
 }
 function get_product_by_id(PDO $pdo, int $id): ?array
@@ -311,6 +370,7 @@ function get_product_by_id(PDO $pdo, int $id): ?array
             p.price,
             p.stock,
             p.featured,
+            p.is_active,
             p.image_url,
             p.created_at,
             p.updated_at,
@@ -343,6 +403,7 @@ function create_product(
             price,
             stock,
             featured,
+            is_active,
             image_url
         )
         VALUES
@@ -353,6 +414,7 @@ function create_product(
             :price,
             :stock,
             :featured,
+            :is_active,
             :image_url
         )'
     );
@@ -364,6 +426,7 @@ function create_product(
         'price' => (float) $values['price'],
         'stock' => (int) $values['stock'],
         'featured' => (int) $values['featured'],
+        'is_active' => (int) $values['is_active'],
         'image_url' => $imageUrl,
     ]);
 
@@ -386,6 +449,7 @@ function update_product(
             price = :price,
             stock = :stock,
             featured = :featured,
+            is_active = :is_active,
             image_url = :image_url
          WHERE id = :id'
     );
@@ -397,28 +461,70 @@ function update_product(
         'price' => (float) $values['price'],
         'stock' => (int) $values['stock'],
         'featured' => (int) $values['featured'],
+        'is_active' => (int) $values['is_active'],
         'image_url' => $imageUrl,
         'id' => $id,
     ]);
 }
-function delete_product(PDO $pdo, int $id): void
+/**
+ * Delete a product, unless it appears in past orders.
+ *
+ * Returns false, and deletes nothing, if an order refers to it. The check and
+ * the delete share one transaction, holding the product's row lock. Checkout
+ * takes the same lock before adding order lines, so an order cannot slip in
+ * between the two steps.
+ */
+function delete_product_if_no_orders(PDO $pdo, int $id): bool
 {
-    $stmt = $pdo->prepare(
-        'DELETE FROM products
-         WHERE id = :id'
-    );
+    $pdo->beginTransaction();
 
-    $stmt->execute([
-        'id' => $id
-    ]);
+    try {
+        $lock = $pdo->prepare(
+            'SELECT id
+             FROM products
+             WHERE id = :id
+             FOR UPDATE'
+        );
+
+        $lock->execute(['id' => $id]);
+
+        $orders = $pdo->prepare(
+            'SELECT COUNT(*)
+             FROM order_items
+             WHERE product_id = :id'
+        );
+
+        $orders->execute(['id' => $id]);
+
+        if ((int) $orders->fetchColumn() > 0) {
+            $pdo->rollBack();
+
+            return false;
+        }
+
+        $delete = $pdo->prepare(
+            'DELETE FROM products
+             WHERE id = :id'
+        );
+
+        $delete->execute(['id' => $id]);
+
+        $pdo->commit();
+
+        return true;
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+
+        throw $e;
+    }
 }
 function flash_set(
     string $message,
     string $type = 'success'
 ): void {
-    if (session_status() === PHP_SESSION_NONE) {
-        session_start();
-    }
+    start_secure_session();
 
     $allowedTypes = [
         'success',
@@ -438,11 +544,30 @@ function flash_set(
 }
 
 
+/**
+ * Accessibility attributes for a form field: marks it invalid and links
+ * it to its error message (and optional hint) for screen readers.
+ */
+function field_aria(string $field, array $errors, string $hintId = ''): string
+{
+    $describedBy = array_filter([
+        $hintId,
+        isset($errors[$field]) ? $field . '-error' : '',
+    ]);
+
+    $attributes = isset($errors[$field]) ? 'aria-invalid="true"' : '';
+
+    if ($describedBy !== []) {
+        $attributes .= ' aria-describedby="'
+            . htmlspecialchars(implode(' ', $describedBy)) . '"';
+    }
+
+    return trim($attributes);
+}
+
 function flash_get(): ?array
 {
-    if (session_status() === PHP_SESSION_NONE) {
-        session_start();
-    }
+    start_secure_session();
 
     if (empty($_SESSION['flash_message'])) {
         return null;
@@ -466,22 +591,43 @@ function flash_get(): ?array
  */
 function cart_items(): array
 {
-    if (session_status() === PHP_SESSION_NONE) {
-        session_start();
-    }
+    start_secure_session();
 
     return $_SESSION['cart'] ?? [];
 }
 
 
 /**
- * Return the total number of units in the cart.
+ * Number of units in the cart that can actually be bought, for the header
+ * badge. Products withdrawn from sale or deleted are not counted.
  */
 function cart_count(): int
 {
-    return array_sum(
-        cart_items()
+    $cart = cart_items();
+
+    if ($cart === []) {
+        return 0;
+    }
+
+    $ids = array_map('intval', array_keys($cart));
+    $placeholders = implode(',', array_fill(0, count($ids), '?'));
+
+    $stmt = get_db()->prepare(
+        "SELECT id
+         FROM products
+         WHERE is_active = 1
+           AND id IN ($placeholders)"
     );
+
+    $stmt->execute($ids);
+
+    $count = 0;
+
+    foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $id) {
+        $count += (int) $cart[$id];
+    }
+
+    return $count;
 }
 
 
@@ -493,9 +639,7 @@ function cart_add(
     int $quantity = 1
 ): void {
 
-    if (session_status() === PHP_SESSION_NONE) {
-        session_start();
-    }
+    start_secure_session();
 
     if (
         $productId <= 0
@@ -525,9 +669,7 @@ function cart_add(
 
 function cart_remove(int $productId): void
 {
-    if (session_status() === PHP_SESSION_NONE) {
-        session_start();
-    }
+    start_secure_session();
 
     if ($productId <= 0) {
         return;
@@ -549,9 +691,7 @@ function cart_update(
     int $quantity
 ): void {
 
-    if (session_status() === PHP_SESSION_NONE) {
-        session_start();
-    }
+    start_secure_session();
 
     if ($productId <= 0) {
         return;
@@ -574,6 +714,9 @@ function abort_request(
     int $statusCode,
     string $message
 ): never {
+    // Start the session before the error page sends any output.
+    start_secure_session();
+
     http_response_code($statusCode);
 
     $titles = [
@@ -827,7 +970,7 @@ function build_admin_filter_url(
         $filters
     );
 
-    return '/product-catalog/admin/'
+    return url('admin/')
         . ($query !== ''
             ? '?' . $query
             : '')

@@ -32,7 +32,7 @@
         <div class="error-actions">
 
             <a
-                href="/product-catalog/index.php"
+                href="<?= url('index.php') ?>"
                 class="button-primary"
             >
                 Back to Products
@@ -41,7 +41,7 @@
             <?php if (admin_is_logged_in()): ?>
 
                 <a
-                    href="/product-catalog/admin/"
+                    href="<?= url('admin/') ?>"
                     class="button-secondary"
                 >
                     Dashboard

@@ -63,6 +63,7 @@ $values = [
     'price' => $product['price'],
     'stock' => $product['stock'],
     'featured' => (string) $product['featured'],
+    'is_active' => (string) $product['is_active'],
 ];
 
 $currentImage = $product['image_url'] ?? null;
@@ -73,22 +74,15 @@ $currentImage = $product['image_url'] ?? null;
 | UPDATE PRODUCT
 |--------------------------------------------------------------------------
 */
-$returnUrl = $_GET['return'] ?? '';
-
-if (
-    $returnUrl !== ''
-    && !str_starts_with(
-        $returnUrl,
-        '/product-catalog/admin/'
-    )
-) {
-    $returnUrl = '';
-}
-
-$returnUrl =
+/*
+ * Where to go after saving. Only admin-area paths are accepted,
+ * so a crafted link cannot redirect the admin to another site.
+ */
+$returnUrl = safe_admin_return_url(
     $_POST['return']
     ?? $_GET['return']
-    ?? '';
+    ?? ''
+);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
@@ -217,7 +211,7 @@ if ($returnUrl !== '') {
 }
 
 header(
-    'Location: /product-catalog/product.php?id='
+    'Location: ' . url('product.php?id=')
     . $id
 );
 
@@ -226,6 +220,9 @@ exit;
 exit;
 
         } catch (Throwable $e) {
+
+            // The administrator sees a generic message; the details go to the log.
+            error_log('Edit product failed: ' . $e->getMessage());
 
             /*
              * If database update fails after
@@ -254,14 +251,14 @@ exit;
 */
 
 $formAction =
-    '/product-catalog/edit.php?id='
+    url('edit.php?id=')
     . (int) $id;
 
 $submitLabel =
     'Save Changes';
 
 $cancelUrl =
-    '/product-catalog/product.php?id='
+    url('product.php?id=')
     . (int) $id;
 ?>
 

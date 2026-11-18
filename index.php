@@ -52,7 +52,7 @@ if (!in_array($sort, $allowedSorts, true)) {
 |--------------------------------------------------------------------------
 */
 
-$categories = get_categories(
+$categories = get_store_departments(
     $pdo
 );
 
@@ -111,10 +111,25 @@ $sql = '
     LEFT JOIN categories c
         ON p.category_id = c.id
 
-    WHERE 1 = 1
+    WHERE p.is_active = 1
 ';
 
 $params = [];
+
+/*
+|--------------------------------------------------------------------------
+| STOREFRONT DEPARTMENTS ONLY
+|--------------------------------------------------------------------------
+*/
+
+$departmentIds = array_map(
+    'intval',
+    array_column($categories, 'id')
+);
+
+$sql .= $departmentIds
+    ? ' AND p.category_id IN (' . implode(',', $departmentIds) . ')'
+    : ' AND 1 = 0';
 
 
 /*
@@ -185,7 +200,7 @@ $orderBy = match ($sort) {
     'p.name DESC, p.id DESC',
 
     default =>
-    'p.created_at DESC, p.id DESC',
+    'p.featured DESC, p.created_at DESC, p.id DESC',
 };
 
 $sql .= '
@@ -292,7 +307,7 @@ if ($sort !== 'newest') {
 }
 
 $allProductsUrl =
-    '/product-catalog/index.php';
+    url('index.php');
 
 if (!empty($allProductsParams)) {
 
@@ -305,726 +320,205 @@ if (!empty($allProductsParams)) {
 $allProductsUrl .=
     '#catalog';
 
+$pageTitle = 'Tools and home improvement';
 
-/*
-|--------------------------------------------------------------------------
-| CLEAR SEARCH URL
-|--------------------------------------------------------------------------
-*/
+// The large featured card only appears on the unfiltered catalogue.
+$showFeatured = $search === '' && !$categoryId && $sort === 'newest';
 
-$clearSearchParams = [];
-
-if ($categoryId) {
-    $clearSearchParams['category'] =
-        (int) $categoryId;
-}
-
-if ($sort !== 'newest') {
-    $clearSearchParams['sort'] =
-        $sort;
-}
-
-$clearSearchUrl =
-    '/product-catalog/index.php';
-
-if (!empty($clearSearchParams)) {
-
-    $clearSearchUrl .=
-        '?' . http_build_query(
-            $clearSearchParams
-        );
-}
-
-$clearSearchUrl .=
-    '#catalog';
-
-
-/*
-|--------------------------------------------------------------------------
-| CLEAR CATEGORY URL
-|--------------------------------------------------------------------------
-*/
-
-$clearCategoryParams = [];
-
-if ($search !== '') {
-    $clearCategoryParams['q'] =
-        $search;
-}
-
-if ($sort !== 'newest') {
-    $clearCategoryParams['sort'] =
-        $sort;
-}
-
-$clearCategoryUrl =
-    '/product-catalog/index.php';
-
-if (!empty($clearCategoryParams)) {
-
-    $clearCategoryUrl .=
-        '?' . http_build_query(
-            $clearCategoryParams
-        );
-}
-
-$clearCategoryUrl .=
-    '#catalog';
-
-
-/*
-|--------------------------------------------------------------------------
-| RESET SORT URL
-|--------------------------------------------------------------------------
-*/
-
-$resetSortParams = [];
-
-if ($search !== '') {
-    $resetSortParams['q'] =
-        $search;
-}
-
-if ($categoryId) {
-    $resetSortParams['category'] =
-        (int) $categoryId;
-}
-
-$resetSortUrl =
-    '/product-catalog/index.php';
-
-if (!empty($resetSortParams)) {
-
-    $resetSortUrl .=
-        '?' . http_build_query(
-            $resetSortParams
-        );
-}
-
-$resetSortUrl .=
-    '#catalog';
-
+require __DIR__ . '/includes/header.php';
 ?>
 
-
-<?php require __DIR__ . '/includes/header.php'; ?>
-
-
-<!-- ==================================================
-     HERO
-================================================== -->
-
 <section class="hero">
-
-    <div class="hero-content">
-
-        <span class="eyebrow">
-            PREMIUM PRODUCT COLLECTION
-        </span>
-
-        <h1>
-            Discover products designed for everyday life.
-        </h1>
-
-        <p class="hero-text">
-            Explore our curated collection of quality products,
-            carefully selected for modern living.
-        </p>
-
-    </div>
-
+    <p class="eyebrow">Built for every project</p>
+    <h1>The right tools.<br>Every time.</h1>
+    <p class="hero-text">
+        Discover quality tools, electrical essentials and everything
+        you need to improve your home.
+    </p>
+    <a href="#catalog" class="button-primary hero-button">Shop Tools</a>
 </section>
 
+<section class="departments" id="departments" aria-labelledby="departments-heading">
+    <h2 id="departments-heading" class="section-title">Shop by Department</h2>
 
-<!-- ==================================================
-     CATALOG
-================================================== -->
+    <div class="department-grid">
+        <?php foreach ($categories as $department): ?>
+            <?php $count = (int) $department['product_count']; ?>
+            <a
+                class="department-tile"
+                href="<?= url('index.php') ?>?category=<?= (int) $department['id'] ?>#catalog">
+                <span class="department-image">
+                    <img
+                        src="<?= htmlspecialchars(product_image_url($department['image_url'])) ?>"
+                        alt=""
+                        loading="lazy">
+                </span>
+                <span class="department-name"><?= htmlspecialchars($department['name']) ?></span>
+                <span class="department-count"><?= $count ?> <?= $count === 1 ? 'product' : 'products' ?></span>
+            </a>
+        <?php endforeach; ?>
+    </div>
+</section>
 
-<section
-    class="catalog-section"
-    id="catalog">
-
-
-    <!-- ==================================================
-         FLASH MESSAGE
-    ================================================== -->
+<section class="catalog-section" id="catalog" aria-labelledby="catalog-heading">
 
     <?php if ($flash): ?>
-
-        <div
-            class="flash flash-<?= htmlspecialchars(
-                                    $flash['type']
-                                ) ?>">
-            <?= htmlspecialchars(
-                $flash['message']
-            ) ?>
+        <div class="flash flash-<?= htmlspecialchars($flash['type']) ?>" role="status">
+            <?= htmlspecialchars($flash['message']) ?>
         </div>
-
     <?php endif; ?>
 
-
-    <!-- ==================================================
-         CATALOG HEADING
-    ================================================== -->
-
-    <div class="catalog-toolbar">
-
-        <div class="catalog-heading">
-
-            <p class="section-label">
-                COLLECTION
-            </p>
-
-            <h2 class="section-title">
-                <?= htmlspecialchars(
-                    $catalogTitle
-                ) ?>
-            </h2>
-
-            <p class="product-count">
-                <?= htmlspecialchars(
-                    $catalogSubtitle
-                ) ?>
-            </p>
-
-
-            <?php if (
-                $search !== ''
-                || $activeCategoryName !== null
-            ): ?>
-
-                <p class="catalog-context">
-
-                    <?php if (
-                        $search !== ''
-                        && $activeCategoryName !== null
-                    ): ?>
-
-                        Showing results for
-                        "<strong><?= htmlspecialchars(
-                                        $search
-                                    ) ?></strong>"
-                        in
-                        <strong><?= htmlspecialchars(
-                                    $activeCategoryName
-                                ) ?></strong>
-
-                    <?php elseif ($search !== ''): ?>
-
-                        Showing results for
-                        "<strong><?= htmlspecialchars(
-                                        $search
-                                    ) ?></strong>"
-
-                    <?php elseif (
-                        $activeCategoryName !== null
-                    ): ?>
-
-                        Showing category
-                        <strong><?= htmlspecialchars(
-                                    $activeCategoryName
-                                ) ?></strong>
-
-                    <?php endif; ?>
-
-                </p>
-
-            <?php endif; ?>
-
-        </div>
-
+    <div class="catalog-heading">
+        <h2 id="catalog-heading" class="section-title"><?= htmlspecialchars($catalogTitle) ?></h2>
+        <p class="product-count"><?= htmlspecialchars($catalogSubtitle) ?></p>
     </div>
 
+    <nav class="category-chips" aria-label="Filter by department">
+        <a
+            href="<?= htmlspecialchars($allProductsUrl) ?>"
+            class="category-chip <?= !$categoryId ? 'active' : '' ?>"
+            <?= !$categoryId ? 'aria-current="true"' : '' ?>>
+            All
+        </a>
 
-    <!-- ==================================================
-         CATALOG CONTROLS
-    ================================================== -->
-
-    <div class="catalog-controls">
-
-
-        <!-- ==================================================
-             CATEGORY CHIPS
-        ================================================== -->
-
-        <div class="category-chips">
-
+        <?php foreach ($categories as $category): ?>
+            <?php
+            $isActive = $categoryId === (int) $category['id'];
+            $categoryUrl = url('index.php?')
+                . http_build_query($categoryQuery + ['category' => (int) $category['id']])
+                . '#catalog';
+            ?>
             <a
-                href="<?= htmlspecialchars(
-                            $allProductsUrl
-                        ) ?>"
-                class="category-chip <?= !$categoryId
-                                            ? 'active'
-                                            : '' ?>">
-                All
+                href="<?= htmlspecialchars($categoryUrl) ?>"
+                class="category-chip <?= $isActive ? 'active' : '' ?>"
+                <?= $isActive ? 'aria-current="true"' : '' ?>>
+                <?= htmlspecialchars($category['name']) ?>
             </a>
+        <?php endforeach; ?>
+    </nav>
 
+    <form class="catalog-search" action="<?= url('index.php') ?>#catalog" method="get" role="search">
+        <?php if ($categoryId): ?>
+            <input type="hidden" name="category" value="<?= (int) $categoryId ?>">
+        <?php endif; ?>
 
-            <?php foreach ($categories as $category): ?>
-
-                <?php
-
-                $categoryUrlParams =
-                    $categoryQuery;
-
-                $categoryUrlParams['category'] =
-                    (int) $category['id'];
-
-                $categoryUrl =
-                    '/product-catalog/index.php?'
-                    . http_build_query(
-                        $categoryUrlParams
-                    )
-                    . '#catalog';
-
-                ?>
-
-                <a
-                    href="<?= htmlspecialchars(
-                                $categoryUrl
-                            ) ?>"
-                    class="category-chip <?= $categoryId === (int) $category['id']
-                                                ? 'active'
-                                                : '' ?>">
-                    <?= htmlspecialchars(
-                        $category['name']
-                    ) ?>
-                </a>
-
-            <?php endforeach; ?>
-
-        </div>
-
-
-        <!-- ==================================================
-             SEARCH & SORT
-        ================================================== -->
-
-        <form
-            class="search-form-premium"
-            action="/product-catalog/index.php#catalog"
-            method="get">
-
-
-            <?php if ($categoryId): ?>
-
-                <input
-                    type="hidden"
-                    name="category"
-                    value="<?= (int) $categoryId ?>">
-
-            <?php endif; ?>
-
-
+        <div class="catalog-search-field">
+            <label for="search">Search products</label>
             <input
                 type="search"
+                id="search"
                 name="q"
-                placeholder="Search products..."
-                value="<?= htmlspecialchars(
-                            $search
-                        ) ?>"
-                class="<?= $search !== ''
-                            ? 'search-active'
-                            : '' ?>"
-                aria-label="Search products">
+                placeholder="Drill, saw, multimeter…"
+                value="<?= htmlspecialchars($search) ?>">
+        </div>
 
-
-            <select
-                name="sort"
-                aria-label="Sort products"
-                onchange="this.form.submit()">
-
-                <option
-                    value="newest"
-                    <?= $sort === 'newest'
-                        ? 'selected'
-                        : '' ?>>
-                    Newest
-                </option>
-
-                <option
-                    value="price_asc"
-                    <?= $sort === 'price_asc'
-                        ? 'selected'
-                        : '' ?>>
-                    Price: Low to High
-                </option>
-
-                <option
-                    value="price_desc"
-                    <?= $sort === 'price_desc'
-                        ? 'selected'
-                        : '' ?>>
-                    Price: High to Low
-                </option>
-
-                <option
-                    value="name_asc"
-                    <?= $sort === 'name_asc'
-                        ? 'selected'
-                        : '' ?>>
-                    Name: A–Z
-                </option>
-
-                <option
-                    value="name_desc"
-                    <?= $sort === 'name_desc'
-                        ? 'selected'
-                        : '' ?>>
-                    Name: Z–A
-                </option>
-
+        <div class="catalog-search-field catalog-sort-field">
+            <label for="sort">Sort by</label>
+            <select id="sort" name="sort">
+                <?php foreach ([
+                    'newest' => 'Featured and newest',
+                    'price_asc' => 'Price: low to high',
+                    'price_desc' => 'Price: high to low',
+                    'name_asc' => 'Name: A to Z',
+                    'name_desc' => 'Name: Z to A',
+                ] as $value => $label): ?>
+                    <option value="<?= $value ?>" <?= $sort === $value ? 'selected' : '' ?>><?= $label ?></option>
+                <?php endforeach; ?>
             </select>
+        </div>
 
+        <button type="submit" class="button-secondary">Apply</button>
 
-            <button type="submit">
-                Search
-            </button>
-
-
-            <?php if ($search !== ''): ?>
-
-                <a
-                    href="<?= htmlspecialchars(
-                                $clearSearchUrl
-                            ) ?>"
-                    class="clear-search">
-                    Clear search
-                </a>
-
-            <?php endif; ?>
-
-
-            <?php if (
-                $categoryId
-                && $search === ''
-            ): ?>
-
-                <a
-                    href="<?= htmlspecialchars(
-                                $clearCategoryUrl
-                            ) ?>"
-                    class="clear-search">
-                    Clear category
-                </a>
-
-            <?php endif; ?>
-
-
-            <?php if ($sort !== 'newest'): ?>
-
-                <a
-                    href="<?= htmlspecialchars(
-                                $resetSortUrl
-                            ) ?>"
-                    class="clear-search">
-                    Reset sort
-                </a>
-
-            <?php endif; ?>
-
-        </form>
-
-    </div>
-
-
-    <!-- ==================================================
-         EMPTY STATE
-    ================================================== -->
+        <?php if ($search !== '' || $categoryId || $sort !== 'newest'): ?>
+            <a href="<?= url('index.php') ?>#catalog" class="catalog-clear">Clear all</a>
+        <?php endif; ?>
+    </form>
 
     <?php if (empty($products)): ?>
 
         <div class="empty-state">
-
-            <h3>
-                No products found
-            </h3>
-
-
+            <h3>No products found</h3>
             <p>
-
-                <?php if (
-                    $search !== ''
-                    && $categoryId
-                    && $activeCategoryName !== null
-                ): ?>
-
-                    No products match
-                    "<strong><?= htmlspecialchars(
-                                    $search
-                                ) ?></strong>"
-                    in
-                    <strong><?= htmlspecialchars(
-                                $activeCategoryName
-                            ) ?></strong>.
-
-
-                <?php elseif ($search !== ''): ?>
-
-                    No products match
-                    "<strong><?= htmlspecialchars(
-                                    $search
-                                ) ?></strong>".
-
-
-                <?php elseif (
-                    $categoryId
-                    && $activeCategoryName !== null
-                ): ?>
-
-                    There are no products in
-                    <strong><?= htmlspecialchars(
-                                $activeCategoryName
-                            ) ?></strong>.
-
-
+                <?php if ($search !== ''): ?>
+                    Nothing matches "<strong><?= htmlspecialchars($search) ?></strong>"<?= $activeCategoryName !== null ? ' in ' . htmlspecialchars($activeCategoryName) : '' ?>.
+                <?php elseif ($activeCategoryName !== null): ?>
+                    There are no products in <?= htmlspecialchars($activeCategoryName) ?> yet.
                 <?php else: ?>
-
                     There are currently no products available.
-
                 <?php endif; ?>
-
             </p>
-
-
-            <a
-                href="/product-catalog/index.php#catalog"
-                class="empty-button">
-                View All Products
-            </a>
-
+            <a href="<?= url('index.php') ?>#catalog" class="button-primary">View all products</a>
         </div>
-
 
     <?php else: ?>
 
-
-        <!-- ==================================================
-             PRODUCT GRID
-        ================================================== -->
-
-        <div class="grid">
-
-
+        <div class="product-grid">
             <?php foreach ($products as $product): ?>
-
-
                 <?php
-
-                $stockStatus = get_stock_status(
-                    (int) $product['stock']
-                );
-
+                $productId = (int) $product['id'];
+                $stock = (int) $product['stock'];
+                $stockStatus = get_stock_status($stock);
+                $isFeaturedCard = $showFeatured && (int) $product['featured'] === 1;
+                $productUrl = url('product.php') . '?id=' . $productId;
                 ?>
+                <article class="product-card <?= $isFeaturedCard ? 'product-card-featured' : '' ?>">
 
+                    <a class="product-card-image" href="<?= $productUrl ?>" tabindex="-1" aria-hidden="true">
+                        <img
+                            src="<?= htmlspecialchars(product_image_url($product['image_url'])) ?>"
+                            alt=""
+                            loading="lazy">
+                    </a>
 
-                <article class="card">
-
-
-                    <!-- ==================================================
-                         PRODUCT IMAGE
-                    ================================================== -->
-
-                    <div class="card-image <?= match ($product['name']) {
-                                                'Wireless Mouse' => 'mouse-image',
-                                                'Notebook Set' => 'notebook-image',
-                                                'Ceramic Mug' => 'mug-image',
-                                                default => ''
-                                            } ?>">
-
-                        <a
-                            href="/product-catalog/product.php?id=<?= (int) $product['id'] ?>"
-                            class="card-image-link"
-                            aria-label="View <?= htmlspecialchars(
-                                                    $product['name']
-                                                ) ?>">
-
-                            <img
-                                src="<?= htmlspecialchars(
-                                            $product['image_url']
-                                                ?: 'https://placehold.co/600x450?text=No+Image'
-                                        ) ?>"
-                                alt="<?= htmlspecialchars(
-                                            $product['name']
-                                        ) ?>">
-
-                        </a>
-
-                    </div>
-
-                    <!-- ==================================================
-                          PRODUCT CONTENT
-                    ================================================== -->
-
-                    <div class="card-body">
-
-
-                        <h3>
-
-                            <a
-                                href="/product-catalog/product.php?id=<?= (int) $product['id'] ?>"
-                                class="card-title-link">
-                                <?= htmlspecialchars(
-                                    $product['name']
-                                ) ?>
-                            </a>
-
-                        </h3>
-
-
-                        <p>
-                            <?= htmlspecialchars(
-                                $product['description']
-                            ) ?>
-                        </p>
-
-                        <!-- ==================================================
-                                  PRODUCT BADGES
-                            ================================================== -->
-
-                        <div class="card-badges">
+                    <div class="product-card-body">
+                        <p class="product-card-meta">
+                            <?php if (!empty($product['category_name'])): ?>
+                                <a
+                                    class="product-category"
+                                    href="<?= url('index.php') ?>?category=<?= (int) $product['category_id'] ?>#catalog">
+                                    <?= htmlspecialchars($product['category_name']) ?>
+                                </a>
+                            <?php endif; ?>
 
                             <?php if ((int) $product['featured'] === 1): ?>
-
-                                <span class="badge badge-featured">
-                                    Featured
-                                </span>
-
+                                <span class="featured-label">Featured</span>
                             <?php endif; ?>
+                        </p>
 
+                        <h3><a href="<?= $productUrl ?>"><?= htmlspecialchars($product['name']) ?></a></h3>
 
-                            <?php if (
-                                !empty($product['category_name'])
-                                && !empty($product['category_id'])
-                            ): ?>
+                        <p class="product-card-text"><?= htmlspecialchars($product['description']) ?></p>
 
-                                <?php
+                        <p class="product-price"><?= format_pence(price_to_pence($product['price'])) ?></p>
 
-                                $badgeParams = [
-                                    'category' => (int) $product['category_id'],
-                                ];
+                        <p class="stock <?= htmlspecialchars($stockStatus['class']) ?>"><?= htmlspecialchars(stock_summary($stock)) ?></p>
 
-                                if ($search !== '') {
-                                    $badgeParams['q'] = $search;
-                                }
-
-                                if ($sort !== 'newest') {
-                                    $badgeParams['sort'] = $sort;
-                                }
-
-                                $badgeUrl =
-                                    '/product-catalog/index.php?'
-                                    . http_build_query($badgeParams)
-                                    . '#catalog';
-
-                                ?>
-
-                                <a
-                                    href="<?= htmlspecialchars($badgeUrl) ?>"
-                                    class="badge badge-category badge-category-link">
-
-                                    <?= htmlspecialchars(
-                                        $product['category_name']
-                                    ) ?>
-
-                                </a>
-
-                            <?php endif; ?>
-
-                        </div>
-
-
-
-
-                        <!-- ==================================================
-                             STOCK STATUS
-                        ================================================== -->
-
-                        <div class="inventory-status">
-
-                            <span
-                                class="stock <?= htmlspecialchars(
-                                                    $stockStatus['class']
-                                                ) ?>">
-                                <?= htmlspecialchars(
-                                    $stockStatus['label']
-                                ) ?>
-                            </span>
-
-                        </div>
-
-
-                        <!-- ==================================================
-                             PRODUCT FOOTER
-                        ================================================== -->
-
-                        <div class="card-footer">
-
-                            <span class="price">
-                                £<?= number_format(
-                                        (float) $product['price'],
-                                        2
-                                    ) ?>
-                            </span>
-
-                            <div class="card-actions">
-
-                                <a
-                                    href="/product-catalog/product.php?id=<?= (int) $product['id'] ?>"
-                                    class="view-product">
-                                    View →
-                                </a>
-
-                                <?php if ((int) $product['stock'] > 0): ?>
-
-                                    <form
-                                        action="/product-catalog/add-to-cart.php"
-                                        method="post">
-
-                                        <input
-                                            type="hidden"
-                                            name="csrf_token"
-                                            value="<?= htmlspecialchars(csrf_token()) ?>">
-
-                                        <input
-                                            type="hidden"
-                                            name="product_id"
-                                            value="<?= (int) $product['id'] ?>">
-
-                                        <button
-                                            type="submit"
-                                            class="add-to-cart-button">
-                                            Add to Cart
-                                        </button>
-
-                                    </form>
-
-                                <?php else: ?>
-
-                                    <button
-                                        type="button"
-                                        class="add-to-cart-button"
-                                        disabled>
-                                        Sold Out
+                        <div class="product-card-actions">
+                            <?php if ($authRole !== 'admin'): ?>
+                            <?php if ($stock > 0): ?>
+                                <form action="<?= url('add-to-cart.php') ?>" method="post">
+                                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
+                                    <input type="hidden" name="product_id" value="<?= $productId ?>">
+                                    <button type="submit" class="button-primary">
+                                        Add to Cart<span class="visually-hidden">: <?= htmlspecialchars($product['name']) ?></span>
                                     </button>
+                                </form>
+                            <?php else: ?>
+                                <button type="button" class="button-primary" disabled>Out of stock</button>
+                            <?php endif; ?>
+                            <?php endif; ?>
 
-                                <?php endif; ?>
-
-                            </div>
-
+                            <a href="<?= $productUrl ?>" class="button-secondary">
+                                View Details<span class="visually-hidden">: <?= htmlspecialchars($product['name']) ?></span>
+                            </a>
                         </div>
-
                     </div>
-
                 </article>
-
             <?php endforeach; ?>
-
         </div>
 
     <?php endif; ?>
 
 </section>
-
 
 <?php require __DIR__ . '/includes/footer.php'; ?>

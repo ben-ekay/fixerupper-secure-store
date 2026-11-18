@@ -1,0 +1,3 @@
+# Internal folder: PHP loads these files from disk, so the
+# browser never needs to request them directly.
+Require all denied

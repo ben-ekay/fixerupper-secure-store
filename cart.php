@@ -3,18 +3,28 @@
 require __DIR__ . '/config/db.php';
 require __DIR__ . '/includes/functions.php';
 
+// Administrators cannot use the cart (see require_shopper()).
+require_shopper();
+
 $pdo = get_db();
 
 $cart = cart_items();
 
 $cartProducts = [];
-$subtotal = 0;
+$subtotalPence = 0;
+$payableItems = 0;
+$unavailableProducts = 0;
+$removedDeletedProduct = false;
 
 
 /*
 |--------------------------------------------------------------------------
 | LOAD CART PRODUCTS
 |--------------------------------------------------------------------------
+|
+| Prices come from the database, in whole pence. Withdrawn products stay
+| visible so they can be removed, but are never part of the payable total.
+|
 */
 
 foreach ($cart as $productId => $quantity) {
@@ -24,7 +34,10 @@ foreach ($cart as $productId => $quantity) {
         (int) $productId
     );
 
+    // Deleted since it was added: nothing to show, so take it out of the cart.
     if (!$product) {
+        cart_remove((int) $productId);
+        $removedDeletedProduct = true;
         continue;
     }
 
@@ -34,41 +47,43 @@ foreach ($cart as $productId => $quantity) {
         continue;
     }
 
-    $price = (float) $product['price'];
+    $linePence = price_to_pence($product['price']) * $quantity;
 
-    $lineTotal = $price * $quantity;
-
-    $subtotal += $lineTotal;
+    if (product_is_on_sale($product)) {
+        $subtotalPence += $linePence;
+        $payableItems += $quantity;
+    } else {
+        $unavailableProducts++;
+    }
 
     $cartProducts[] = [
         'product' => $product,
         'quantity' => $quantity,
-        'line_total' => $lineTotal,
+        'line_pence' => $linePence,
     ];
 }
 
-?>
+if ($removedDeletedProduct) {
+    flash_set('A product in your cart is no longer sold, so it has been removed.', 'warning');
+}
 
-<?php require __DIR__ . '/includes/header.php'; ?>
+$pageTitle = 'Shopping cart';
+require __DIR__ . '/includes/header.php';
+?>
 
 <?php $flash = flash_get(); ?>
 
-<?php if ($flash): ?>
-    <div
-        class="cart-alert <?= $flash['type'] === 'error' ? 'cart-alert-error' : 'cart-alert-success' ?>"
-        role="status">
-        <?= htmlspecialchars($flash['message']) ?>
-    </div>
-<?php endif; ?>
-
-
 <section class="cart-page">
+
+    <?php if ($flash): ?>
+        <div class="flash flash-<?= htmlspecialchars($flash['type']) ?>" role="status">
+            <?= htmlspecialchars($flash['message']) ?>
+        </div>
+    <?php endif; ?>
 
     <div class="cart-heading">
 
-        <p class="section-label">
-            YOUR SELECTION
-        </p>
+        <p class="section-label">Your selection</p>
 
         <h1>Shopping Cart</h1>
 
@@ -86,13 +101,12 @@ foreach ($cart as $productId => $quantity) {
             <h3>Your cart is empty</h3>
 
             <p>
-                Discover our products and add
-                something to your cart.
+                Browse our tools and add something to your cart.
             </p>
 
             <a
-                href="/product-catalog/index.php#catalog"
-                class="empty-button">
+                href="<?= url('index.php') ?>#catalog"
+                class="button-primary">
                 Explore Products
             </a>
 
@@ -115,13 +129,10 @@ foreach ($cart as $productId => $quantity) {
                     <article class="cart-item">
 
                         <a
-                            href="/product-catalog/product.php?id=<?= (int) $product['id'] ?>">
+                            href="<?= url('product.php') ?>?id=<?= (int) $product['id'] ?>">
 
                             <img
-                                src="<?= htmlspecialchars(
-                                            $product['image_url']
-                                                ?: 'https://placehold.co/600x450?text=No+Image'
-                                        ) ?>"
+                                src="<?= htmlspecialchars(product_image_url($product['image_url'])) ?>"
                                 alt="<?= htmlspecialchars(
                                             $product['name']
                                         ) ?>"
@@ -137,16 +148,15 @@ foreach ($cart as $productId => $quantity) {
                                 ) ?>
                             </h2>
 
-                            <p>
-                                £<?= number_format(
-                                        (float) $product['price'],
-                                        2
-                                    ) ?> each
-                            </p>
+                            <?php if (product_is_on_sale($product)): ?>
+                                <p><?= format_pence(price_to_pence($product['price'])) ?> each</p>
+                            <?php endif; ?>
+
+                            <?php if (product_is_on_sale($product)): ?>
 
                             <form
                                 method="post"
-                                action="/product-catalog/update-cart.php"
+                                action="<?= url('update-cart.php') ?>"
                                 class="cart-quantity-form">
                                 <input
                                     type="hidden"
@@ -178,9 +188,17 @@ foreach ($cart as $productId => $quantity) {
                                 </div>
                             </form>
 
+                            <?php else: ?>
+
+                                <p class="cart-unavailable">
+                                    No longer available. Please remove this item.
+                                </p>
+
+                            <?php endif; ?>
+
                             <form
                                 method="post"
-                                action="/product-catalog/remove-from-cart.php"
+                                action="<?= url('remove-from-cart.php') ?>"
                                 class="cart-remove-form">
                                 <input
                                     type="hidden"
@@ -195,17 +213,18 @@ foreach ($cart as $productId => $quantity) {
                                 <button
                                     type="submit"
                                     class="cart-remove-button">
-                                    Remove
+                                    Remove<span class="visually-hidden">: <?= htmlspecialchars($product['name']) ?></span>
                                 </button>
                             </form>
 
                         </div>
 
                         <strong class="cart-item-total">
-                            £<?= number_format(
-                                    $item['line_total'],
-                                    2
-                                ) ?>
+                            <?php if (product_is_on_sale($product)): ?>
+                                <?= format_pence($item['line_pence']) ?>
+                            <?php else: ?>
+                                Not included
+                            <?php endif; ?>
                         </strong>
 
                     </article>
@@ -223,14 +242,7 @@ foreach ($cart as $productId => $quantity) {
 
                     <span>Items</span>
 
-                    <strong>
-                        <?= array_sum(
-                            array_column(
-                                $cartProducts,
-                                'quantity'
-                            )
-                        ) ?>
-                    </strong>
+                    <strong><?= $payableItems ?></strong>
 
                 </div>
 
@@ -238,12 +250,7 @@ foreach ($cart as $productId => $quantity) {
 
                     <span>Subtotal</span>
 
-                    <strong>
-                        £<?= number_format(
-                                $subtotal,
-                                2
-                            ) ?>
-                    </strong>
+                    <strong><?= format_pence($subtotalPence) ?></strong>
 
                 </div>
 
@@ -252,9 +259,35 @@ foreach ($cart as $productId => $quantity) {
                     No payment will be taken.
                 </p>
 
+                <?php if ($unavailableProducts > 0): ?>
+
+                    <p class="cart-unavailable" role="status">
+                        <?= $unavailableProducts === 1
+                            ? 'One item is no longer available and is not included above.'
+                            : $unavailableProducts . ' items are no longer available and are not included above.' ?>
+                        Remove <?= $unavailableProducts === 1 ? 'it' : 'them' ?> to continue to checkout.
+                    </p>
+
+                <?php else: ?>
+
+                    <a
+                        href="<?= url('checkout.php') ?>"
+                        class="button-primary">
+                        Proceed to Checkout
+                    </a>
+
+                    <?php if ($authRole === null): ?>
+                        <p class="cart-summary-note">
+                            You will be asked to log in or create an account.
+                            Your cart will be kept.
+                        </p>
+                    <?php endif; ?>
+
+                <?php endif; ?>
+
                 <a
-                    href="/product-catalog/index.php#catalog"
-                    class="button-primary">
+                    href="<?= url('index.php') ?>#catalog"
+                    class="button-secondary">
                     Continue Shopping
                 </a>
 

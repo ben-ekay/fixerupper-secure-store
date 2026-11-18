@@ -1,0 +1,25 @@
+# FixerUpper Secure Store — Apache access rules
+# Written for Apache 2.4 (MAMP). Requires "AllowOverride All" for htdocs.
+
+# 1. Never show a list of files when a folder has no index page.
+Options -Indexes
+
+# 2. Hide every dot-file and dot-folder (.git, .gitignore, .htaccess,
+#    .DS_Store ...). Answers 404 so their existence is not confirmed.
+RedirectMatch 404 /\.
+
+# 3. Block internal file types anywhere in the project:
+#    SQL scripts, documentation, evidence files, backups and logs.
+#    (?i) = ignore upper/lower case, because macOS file names are
+#    case-insensitive: SCHEMA.SQL would otherwise slip through.
+<FilesMatch "(?i)\.(sql|md|mov|mp4|docx|pdf|bak|old|log|sh|ini)$">
+    Require all denied
+</FilesMatch>
+
+# 4. Security headers for static files (PHP pages set their own headers in
+#    includes/security-headers.php).
+<IfModule mod_headers.c>
+    <FilesMatch "(?i)\.(css|js|svg|png|jpe?g|webp|ico)$">
+        Header set X-Content-Type-Options "nosniff"
+    </FilesMatch>
+</IfModule>

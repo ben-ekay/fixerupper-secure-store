@@ -3,6 +3,9 @@
 require __DIR__ . '/config/db.php';
 require __DIR__ . '/includes/functions.php';
 
+// Administrators cannot use the cart (see require_shopper()).
+require_shopper();
+
 $pdo = get_db();
 
 
@@ -95,6 +98,23 @@ if (!$product) {
     );
 }
 
+/*
+|--------------------------------------------------------------------------
+| WITHDRAWN PRODUCTS CANNOT BE BOUGHT
+|--------------------------------------------------------------------------
+|
+| The buy button is hidden for these products, but a request can be sent
+| without using the page, so the server must check as well.
+|
+*/
+
+if (!product_is_on_sale($product)) {
+    abort_request(
+        404,
+        'This product is no longer available.'
+    );
+}
+
 
 /*
 |--------------------------------------------------------------------------
@@ -112,7 +132,7 @@ if ($stock <= 0) {
     );
 
     header(
-        'Location: /product-catalog/index.php#catalog'
+        'Location: ' . url('index.php#catalog')
     );
 
     exit;
@@ -148,7 +168,7 @@ if ($newQuantity > $stock) {
     );
 
     header(
-        'Location: /product-catalog/index.php#catalog'
+        'Location: ' . url('index.php#catalog')
     );
 
     exit;
@@ -186,7 +206,7 @@ flash_set(
 */
 
 header(
-    'Location: /product-catalog/index.php#catalog'
+    'Location: ' . url('index.php#catalog')
 );
 
 exit;
