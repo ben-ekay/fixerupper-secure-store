@@ -1,0 +1,5 @@
+# Uploaded files are images only. Even if a script were uploaded,
+# refuse to serve or run it (defence in depth for file uploads).
+<FilesMatch "(?i)\.(php|phtml|phar|php[0-9]|pl|py|cgi|sh)$">
+    Require all denied
+</FilesMatch>

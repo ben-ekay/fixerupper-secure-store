@@ -3,7 +3,7 @@ require __DIR__ . '/../config/db.php';
 require __DIR__ . '/../includes/functions.php';
 
 if (admin_is_logged_in()) {
-    header('Location: /product-catalog/admin/');
+    header('Location: ' . url('admin/'));
     exit;
 }
 
@@ -15,61 +15,47 @@ $email = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (!csrf_validate($_POST['csrf_token'] ?? null)) {
-        http_response_code(403);
-        die('Invalid CSRF token.');
+        abort_request(403, 'Invalid CSRF token.');
     }
 
-    $email = trim($_POST['email'] ?? '');
-    $password = $_POST['password'] ?? '';
+    $email = is_string($_POST['email'] ?? null) ? trim($_POST['email']) : '';
+    $password = is_string($_POST['password'] ?? null) ? $_POST['password'] : '';
 
-    $stmt = $pdo->prepare(
-        'SELECT id, name, email, password, role
-         FROM users
-         WHERE email = :email
-         LIMIT 1'
-    );
+    // Shared, throttled login check. Only accounts with the admin role
+    // can sign in here; customers get the same generic error.
+    $result = attempt_login($pdo, $email, $password, 'admin');
 
-    $stmt->execute([
-        'email' => $email
-    ]);
+    if ($result['user'] !== null) {
+        auth_login($result['user']);
 
-    $user = $stmt->fetch();
+        // Administrators cannot shop, so a cart left from browsing as a
+        // guest is removed now that the sign-in has succeeded.
+        unset($_SESSION['cart']);
 
-    if (
-        $user
-        && password_verify($password, $user['password'])
-        && $user['role'] === 'admin'
-    ) {
-
-        admin_login($user);
-
-        header('Location: /product-catalog/admin/');
+        header('Location: ' . url('admin/'));
         exit;
-
-    } else {
-
-        $error = 'Invalid email or password.';
     }
+
+    $error = $result['error'];
 }
+
+$pageTitle = 'Administrator sign-in';
+require __DIR__ . '/../includes/header.php';
 ?>
 
-<?php require __DIR__ . '/../includes/header.php'; ?>
+<section class="auth-page">
 
-<section class="admin-login-page">
+    <div class="auth-card">
 
-    <div class="admin-login-card">
+        <div class="auth-heading">
 
-        <div class="admin-login-heading">
-
-            <span class="eyebrow">
-                NOVASTORE ADMIN
-            </span>
+            <p class="eyebrow">FixerUpper admin</p>
 
             <h1>Welcome back</h1>
 
             <p>
                 Sign in to manage products,
-                inventory and your NovaStore catalog.
+                stock and departments.
             </p>
 
         </div>
@@ -84,15 +70,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <form
             method="post"
-            action="/product-catalog/admin/login.php"
-            class="product-form"
-        >
+            action="<?= url('admin/login.php') ?>"
+            class="auth-form">
 
             <input
                 type="hidden"
                 name="csrf_token"
-                value="<?= htmlspecialchars(csrf_token()) ?>"
-            >
+                value="<?= htmlspecialchars(csrf_token()) ?>">
 
             <div class="form-group">
 
@@ -106,8 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     name="email"
                     value="<?= htmlspecialchars($email) ?>"
                     autocomplete="email"
-                    required
-                >
+                    required>
 
             </div>
 
@@ -122,15 +105,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     id="password"
                     name="password"
                     autocomplete="current-password"
-                    required
-                >
+                    required>
 
             </div>
 
             <button
                 type="submit"
-                class="button-primary admin-login-button"
-            >
+                class="button-primary auth-button">
                 Sign In
             </button>
 

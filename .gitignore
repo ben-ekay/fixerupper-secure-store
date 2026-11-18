@@ -1,21 +1,17 @@
-.DS_Store
-
-# Local environment / secrets
+# Local credentials and environment files
+/config/db.php
 .env
 .env.*
+!.env.example
 
-# Local database/config files with credentials
-config/db.php
-!config/db.example.php
-config/local.php
-config/database.local.php
+# OS and editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
 
-# Uploaded runtime files
-uploads/products/*
+# Runtime logs
+*.log
 
-# Keep the uploads folder in Git
-!uploads/products/.gitkeep
-
-# Formative assessment evidence (not part of Summative)
-NovaStore*.mov
-NovaStore*_Evidence.docx
+# User-uploaded runtime files (keep supplied demo catalogue images)
+# Review any new files in uploads/products/ before committing them.

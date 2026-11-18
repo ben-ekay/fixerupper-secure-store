@@ -1,9 +1,13 @@
 <?php
 require_once __DIR__ . '/functions.php';
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+start_secure_session();
+
+// Work out who is signed in BEFORE any HTML is sent: if the session has
+// timed out, auth_user() issues a new session cookie, which must happen
+// before output starts.
+$authUser = auth_user();
+$authRole = $authUser['role'] ?? null;
 
 $currentPath = parse_url(
     $_SERVER['REQUEST_URI'] ?? '',
@@ -11,86 +15,119 @@ $currentPath = parse_url(
 );
 
 $isProducts =
-    $currentPath === '/product-catalog/'
-    || $currentPath === '/product-catalog'
-    || $currentPath === '/product-catalog/index.php'
-    || $currentPath === '/product-catalog/product.php';
+    $currentPath === url()
+    || $currentPath === BASE_URL
+    || $currentPath === url('index.php')
+    || $currentPath === url('product.php');
 
 $isDashboard =
-    $currentPath === '/product-catalog/admin/'
-    || $currentPath === '/product-catalog/admin/index.php'
-    || $currentPath === '/product-catalog/edit.php';
+    $currentPath === url('admin/')
+    || $currentPath === url('admin/index.php')
+    || $currentPath === url('edit.php');
 
 $isCategories =
-    $currentPath === '/product-catalog/admin/categories.php';
+    $currentPath === url('admin/categories.php');
+
+// Admin screens also load the older admin stylesheet.
+$isAdminPage =
+    str_starts_with((string) $currentPath, url('admin/'))
+    || $currentPath === url('add.php')
+    || $currentPath === url('edit.php');
+
+// Pages can set $pageTitle before including this file.
+$documentTitle = isset($pageTitle)
+    ? $pageTitle . ' | FixerUpper'
+    : 'FixerUpper | Tools and home improvement';
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-GB">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="FixerUpper: quality tools, electrical essentials and everything you need to improve your home.">
 
-    <title>NovaStore | Product Catalog</title>
+    <title><?= htmlspecialchars($documentTitle) ?></title>
 
-    <link
+    <link rel="icon" href="<?= url('assets/images/logo-mark.svg') ?>" type="image/svg+xml">
 
-        rel="stylesheet"
+    <?php if ($isAdminPage): ?>
+        <link rel="stylesheet" href="<?= url('assets/css/style.css') ?>?v=21">
+    <?php endif; ?>
 
-        href="/product-catalog/assets/css/style.css?v=14">
+    <link rel="stylesheet" href="<?= url('assets/css/store.css') ?>?v=6">
 </head>
 
 <body>
+
+    <a class="skip-link" href="#main-content">Skip to main content</a>
 
     <header class="site-header">
 
         <div class="header-container">
 
-            <a
-                class="brand"
-                href="/product-catalog/index.php">
-
-                <span class="brand-mark">
-                    N
-                </span>
-
-                <span class="brand-text">
-                    NovaStore
-                </span>
-
+            <a class="brand" href="<?= url('index.php') ?>">
+                <img class="brand-mark" src="<?= url('assets/images/logo-mark.svg') ?>" alt="">
+                <span class="brand-text">FixerUpper</span>
             </a>
 
-            <nav class="main-nav">
+            <nav class="main-nav" aria-label="Main">
 
                 <a
-                    href="/product-catalog/cart.php"
-                    class="<?= $currentPath === '/product-catalog/cart.php' ? 'nav-active' : '' ?> cart-nav-link">
-                    Cart
-
-                    <?php if (cart_count() > 0): ?>
-                        <span class="cart-count">
-                            <?= (int) cart_count() ?>
-                        </span>
-                    <?php endif; ?>
+                    href="<?= url('index.php') ?>#catalog"
+                    class="<?= $isProducts ? 'nav-active' : '' ?>">
+                    Shop
                 </a>
 
-                <?php if (admin_is_logged_in()): ?>
+                <?php if ($authRole === 'admin'): ?>
 
                     <a
-                        href="/product-catalog/admin/"
+                        href="<?= url('admin/') ?>"
                         class="<?= $isDashboard ? 'nav-active' : '' ?>">
                         Dashboard
                     </a>
 
                     <a
-                        href="/product-catalog/admin/categories.php"
+                        href="<?= url('admin/categories.php') ?>"
                         class="<?= $isCategories ? 'nav-active' : '' ?>">
                         Categories
                     </a>
 
+                <?php elseif ($authRole === 'customer'): ?>
+
+                    <a
+                        href="<?= url('my-orders.php') ?>"
+                        class="<?= $currentPath === url('my-orders.php') ? 'nav-active' : '' ?>">
+                        My orders
+                    </a>
+
+                    <span class="nav-greeting">
+                        Hi, <?= htmlspecialchars(
+                                strtok($authUser['name'], ' ') ?: $authUser['name']
+                            ) ?>
+                    </span>
+
+                <?php else: ?>
+
+                    <a
+                        href="<?= url('login.php') ?>"
+                        class="<?= $currentPath === url('login.php') ? 'nav-active' : '' ?>">
+                        Log in
+                    </a>
+
+                    <a
+                        href="<?= url('register.php') ?>"
+                        class="<?= $currentPath === url('register.php') ? 'nav-active' : '' ?>">
+                        Register
+                    </a>
+
+                <?php endif; ?>
+
+                <?php if ($authRole !== null): ?>
+
                     <form
                         method="post"
-                        action="/product-catalog/admin/logout.php"
+                        action="<?= url('logout.php') ?>"
                         class="nav-logout-form">
                         <input
                             type="hidden"
@@ -104,12 +141,26 @@ $isCategories =
                         </button>
                     </form>
 
-                <?php else: ?>
+                <?php endif; ?>
 
-                    <a
-                        href="/product-catalog/admin/login.php">
-                        Log in
-                    </a>
+                <?php if ($authRole !== 'admin'): ?>
+
+                <a
+                    href="<?= url('cart.php') ?>"
+                    class="<?= $currentPath === url('cart.php') ? 'nav-active' : '' ?> cart-nav-link">
+                    <svg class="cart-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
+                        <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 4h2l2.4 11h10.2L20 7H6"/>
+                        <circle cx="9" cy="19.5" r="1.5" fill="currentColor"/>
+                        <circle cx="17" cy="19.5" r="1.5" fill="currentColor"/>
+                    </svg>
+                    Cart
+
+                    <?php if (cart_count() > 0): ?>
+                        <span class="cart-count">
+                            <?= (int) cart_count() ?>
+                        </span>
+                    <?php endif; ?>
+                </a>
 
                 <?php endif; ?>
 
@@ -119,4 +170,4 @@ $isCategories =
 
     </header>
 
-    <main class="main-content">
+    <main class="main-content" id="main-content">

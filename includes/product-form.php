@@ -254,13 +254,37 @@
                 </strong>
 
                 <small>
-                    Highlight this product in the NovaStore collection.
+                    Highlight this product in the FixerUpper catalogue.
                 </small>
 
             </span>
 
         </label>
 
+
+        <label class="featured-option">
+
+            <input
+                type="checkbox"
+                name="is_active"
+                value="1"
+                <?= ($values['is_active'] ?? '1') === '1'
+                    ? 'checked'
+                    : '' ?>
+            >
+
+            <span>
+                <strong>
+                    Active (on sale)
+                </strong>
+
+                <small>
+                    Untick to hide this product from customers and stop it being bought.
+                    Past orders are not affected.
+                </small>
+            </span>
+
+        </label>
 
         <div class="form-actions">
 

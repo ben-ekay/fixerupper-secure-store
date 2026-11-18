@@ -74,7 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 );
 
                 header(
-                    'Location: /product-catalog/admin/categories.php'
+                    'Location: ' . url('admin/categories.php')
                 );
 
                 exit;
@@ -144,7 +144,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 );
 
                 header(
-                    'Location: /product-catalog/admin/categories.php'
+                    'Location: ' . url('admin/categories.php')
                 );
 
                 exit;
@@ -197,7 +197,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             );
 
             header(
-                'Location: /product-catalog/admin/categories.php'
+                'Location: ' . url('admin/categories.php')
             );
 
             exit;
@@ -258,7 +258,7 @@ $categories =
         <div>
 
             <span class="eyebrow">
-                NOVASTORE ADMIN
+                FIXERUPPER ADMIN
             </span>
 
             <h1>
@@ -266,14 +266,14 @@ $categories =
             </h1>
 
             <p>
-                Organise your catalog and manage
+                Organise your catalogue and manage
                 product categories.
             </p>
 
         </div>
 
         <a
-            href="/product-catalog/admin/"
+            href="<?= url('admin/') ?>"
             class="button-secondary"
         >
             ← Dashboard
@@ -362,7 +362,7 @@ $categories =
 
             <form
                 method="post"
-                action="/product-catalog/admin/categories.php"
+                action="<?= url('admin/categories.php') ?>"
                 class="product-form"
             >
 
@@ -425,7 +425,7 @@ $categories =
                 <div>
 
                     <span class="section-label">
-                        CATALOG
+                        CATALOGUE
                     </span>
 
                     <h2>
@@ -466,7 +466,7 @@ $categories =
 
                             <form
                                 method="post"
-                                action="/product-catalog/admin/categories.php"
+                                action="<?= url('admin/categories.php') ?>"
                                 class="category-edit-form"
                             >
 
@@ -540,8 +540,8 @@ $categories =
 
                                 <form
                                     method="post"
-                                    action="/product-catalog/admin/categories.php"
-                                    onsubmit="return confirm('Delete this category?');"
+                                    action="<?= url('admin/categories.php') ?>"
+                                    data-confirm="Delete this category?"
                                 >
 
                                     <input

@@ -17,6 +17,7 @@ $values = [
     'price' => '',
     'stock' => '',
     'featured' => '0',
+    'is_active' => '1',
 ];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -101,12 +102,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 );
 
 header(
-    'Location: /product-catalog/index.php'
+    'Location: ' . url('index.php')
 );
 
 exit;
 
         } catch (Throwable $e) {
+
+            // The administrator sees a generic message; the details go to the log.
+            error_log('Add product failed: ' . $e->getMessage());
 
             /*
              * If the image was uploaded but
@@ -135,13 +139,13 @@ exit;
 */
 
 $formAction =
-    '/product-catalog/add.php';
+    url('add.php');
 
 $submitLabel =
     'Add Product';
 
 $cancelUrl =
-    '/product-catalog/index.php';
+    url('index.php');
 
 $currentImage = null;
 ?>
@@ -163,7 +167,7 @@ $currentImage = null;
         </h1>
 
         <p>
-            Create a new item for your NovaStore collection.
+            Create a new item for your FixerUpper catalogue.
             Add its details, category and inventory information below.
         </p>
 

@@ -3,6 +3,9 @@
 require __DIR__ . '/config/db.php';
 require __DIR__ . '/includes/functions.php';
 
+// Administrators cannot use the cart (see require_shopper()).
+require_shopper();
+
 $pdo = get_db();
 
 /*
@@ -56,7 +59,7 @@ $quantity = filter_input(
 if ($quantity === false || $quantity === null || $quantity < 0) {
     flash_set('Please enter a valid quantity.', 'error');
 
-    header('Location: /product-catalog/cart.php');
+    header('Location: ' . url('cart.php'));
     exit;
 }
 
@@ -71,7 +74,7 @@ $cart = cart_items();
 if (!isset($cart[$productId])) {
     flash_set('Product not found in your cart.', 'error');
 
-    header('Location: /product-catalog/cart.php');
+    header('Location: ' . url('cart.php'));
     exit;
 }
 
@@ -86,7 +89,7 @@ if ($quantity === 0) {
 
     flash_set('Product removed from your cart.');
 
-    header('Location: /product-catalog/cart.php');
+    header('Location: ' . url('cart.php'));
     exit;
 }
 
@@ -98,10 +101,10 @@ if ($quantity === 0) {
 
 $product = get_product_by_id($pdo, $productId);
 
-if (!$product) {
-    flash_set('Product no longer available.', 'error');
+if (!$product || !product_is_on_sale($product)) {
+    flash_set('This product is no longer available. Please remove it from your cart.', 'error');
 
-    header('Location: /product-catalog/cart.php');
+    header('Location: ' . url('cart.php'));
     exit;
 }
 
@@ -113,7 +116,7 @@ if ($quantity > $stock) {
         'error'
     );
 
-    header('Location: /product-catalog/cart.php');
+    header('Location: ' . url('cart.php'));
     exit;
 }
 
@@ -127,5 +130,5 @@ cart_update($productId, $quantity);
 
 flash_set('Cart updated successfully.');
 
-header('Location: /product-catalog/cart.php');
+header('Location: ' . url('cart.php'));
 exit;

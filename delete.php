@@ -80,10 +80,25 @@ if (!$product) {
 |--------------------------------------------------------------------------
 */
 
-delete_product(
-    $pdo,
-    $id
-);
+$redirect = $_POST['redirect'] ?? '';
+
+// Past orders refer to this product, so keep it. This check runs on the
+// server, so it cannot be bypassed by sending a request directly.
+if (!delete_product_if_no_orders($pdo, $id)) {
+    flash_set(
+        '"' . $product['name'] . '" cannot be deleted because it appears in past orders. '
+            . 'To stop selling it, edit the product and untick "Active (on sale)".',
+        'error'
+    );
+
+    header(
+        'Location: ' . ($redirect === 'dashboard'
+            ? url('admin/#products')
+            : url('product.php?id=' . (int) $id))
+    );
+
+    exit;
+}
 
 delete_product_image(
     $product['image_url'] ?? null
@@ -107,15 +122,13 @@ flash_set(
 |--------------------------------------------------------------------------
 */
 
-$redirect = $_POST['redirect'] ?? '';
-
 if ($redirect === 'dashboard') {
-    header('Location: /product-catalog/admin/#products');
+    header('Location: ' . url('admin/#products'));
     exit;
 }
 
 header(
-    'Location: /product-catalog/index.php'
+    'Location: ' . url('index.php')
 );
 
 exit;

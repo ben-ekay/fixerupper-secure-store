@@ -31,6 +31,7 @@ $allowedStatuses = [
     'in-stock',
     'low-stock',
     'out-of-stock',
+    'inactive',
 ];
 
 $status = $_GET['status'] ?? '';
@@ -138,7 +139,8 @@ $totalCategories = (int) $pdo->query(
 
 $totalStock = (int) $pdo->query(
     'SELECT COALESCE(SUM(stock), 0)
-     FROM products'
+     FROM products
+     WHERE is_active = 1'
 )->fetchColumn();
 
 
@@ -162,13 +164,24 @@ $standardProducts = (int) $pdo->query(
 |--------------------------------------------------------------------------
 */
 
+// Stock alerts and health figures cover products on sale only:
+// a withdrawn product running low needs no action.
+$inactiveProducts = (int) $pdo->query(
+    'SELECT COUNT(*)
+     FROM products
+     WHERE is_active = 0'
+)->fetchColumn();
+
+$activeProducts = $totalProducts - $inactiveProducts;
+
 $lowStockProducts = $pdo->query(
     'SELECT
         id,
         name,
         stock
      FROM products
-     WHERE stock BETWEEN 1 AND 5
+     WHERE is_active = 1
+       AND stock BETWEEN 1 AND 5
      ORDER BY stock ASC, name ASC'
 )->fetchAll();
 
@@ -186,7 +199,8 @@ $lowStockCount = count(
 $outOfStockCount = (int) $pdo->query(
     'SELECT COUNT(*)
      FROM products
-     WHERE stock = 0'
+     WHERE is_active = 1
+       AND stock = 0'
 )->fetchColumn();
 
 
@@ -197,23 +211,23 @@ $outOfStockCount = (int) $pdo->query(
 */
 
 $healthyStockCount =
-    $totalProducts
+    $activeProducts
     - $lowStockCount
     - $outOfStockCount;
 
 
-$healthyPercent = $totalProducts > 0
-    ? ($healthyStockCount / $totalProducts) * 100
+$healthyPercent = $activeProducts > 0
+    ? ($healthyStockCount / $activeProducts) * 100
     : 0;
 
 
-$lowStockPercent = $totalProducts > 0
-    ? ($lowStockCount / $totalProducts) * 100
+$lowStockPercent = $activeProducts > 0
+    ? ($lowStockCount / $activeProducts) * 100
     : 0;
 
 
-$outOfStockPercent = $totalProducts > 0
-    ? ($outOfStockCount / $totalProducts) * 100
+$outOfStockPercent = $activeProducts > 0
+    ? ($outOfStockCount / $activeProducts) * 100
     : 0;
 
 
@@ -230,6 +244,7 @@ $sql = '
         p.price,
         p.stock,
         p.featured,
+        p.is_active,
         p.image_url,
         p.updated_at,
         p.category_id,
@@ -308,19 +323,26 @@ if ($status === 'featured') {
 } elseif ($status === 'in-stock') {
 
     $sql .= '
+        AND p.is_active = 1
         AND p.stock > 5
     ';
 
 } elseif ($status === 'low-stock') {
 
     $sql .= '
+        AND p.is_active = 1
         AND p.stock BETWEEN 1 AND 5
     ';
 
 } elseif ($status === 'out-of-stock') {
 
     $sql .= '
+        AND p.is_active = 1
         AND p.stock = 0
+    ';
+} elseif ($status === 'inactive') {
+    $sql .= '
+        AND p.is_active = 0
     ';
 }
 
@@ -427,7 +449,7 @@ if ($categoryId) {
         <div>
 
             <span class="eyebrow">
-                NOVASTORE ADMIN
+                FIXERUPPER ADMIN
             </span>
 
             <h1>
@@ -475,7 +497,7 @@ if ($categoryId) {
         <div class="admin-heading-actions">
 
             <a
-                href="/product-catalog/add.php"
+                href="<?= url('add.php') ?>"
                 class="button-primary"
             >
                 + Add Product
@@ -513,7 +535,7 @@ if ($categoryId) {
 
 
         <a
-            href="/product-catalog/admin/#products"
+            href="<?= url('admin/') ?>#products"
             class="stat-card stat-card-link"
         >
 
@@ -529,7 +551,7 @@ if ($categoryId) {
 
 
         <a
-            href="/product-catalog/admin/categories.php"
+            href="<?= url('admin/categories.php') ?>"
             class="stat-card stat-card-link"
         >
 
@@ -669,7 +691,7 @@ if ($categoryId) {
 
 
             <a
-                href="/product-catalog/add.php"
+                href="<?= url('add.php') ?>"
                 class="quick-action-card"
             >
 
@@ -684,7 +706,7 @@ if ($categoryId) {
                     </strong>
 
                     <span>
-                        Create a new catalog item
+                        Create a new catalogue item
                     </span>
 
                 </div>
@@ -693,7 +715,7 @@ if ($categoryId) {
 
 
             <a
-                href="/product-catalog/admin/categories.php"
+                href="<?= url('admin/categories.php') ?>"
                 class="quick-action-card"
             >
 
@@ -717,7 +739,7 @@ if ($categoryId) {
 
 
             <a
-                href="/product-catalog/index.php"
+                href="<?= url('index.php') ?>"
                 class="quick-action-card"
             >
 
@@ -732,7 +754,7 @@ if ($categoryId) {
                     </strong>
 
                     <span>
-                        Open the public product catalog
+                        Open the public product catalogue
                     </span>
 
                 </div>
@@ -845,19 +867,19 @@ if ($categoryId) {
 
             <span
                 class="inventory-health-segment inventory-health-good"
-                style="width: <?= $healthyPercent ?>%"
+                data-width="<?= round($healthyPercent, 2) ?>"
                 title="In Stock"
             ></span>
 
             <span
                 class="inventory-health-segment inventory-health-warning"
-                style="width: <?= $lowStockPercent ?>%"
+                data-width="<?= round($lowStockPercent, 2) ?>"
                 title="Low Stock"
             ></span>
 
             <span
                 class="inventory-health-segment inventory-health-danger"
-                style="width: <?= $outOfStockPercent ?>%"
+                data-width="<?= round($outOfStockPercent, 2) ?>"
                 title="Out of Stock"
             ></span>
 
@@ -945,7 +967,7 @@ if ($categoryId) {
             <div>
 
                 <span class="section-label">
-                    CATALOG MANAGEMENT
+                    CATALOGUE MANAGEMENT
                 </span>
 
                 <h2>
@@ -975,7 +997,7 @@ if ($categoryId) {
         <form
             class="admin-filters"
             method="get"
-            action="/product-catalog/admin/#products"
+            action="<?= url('admin/') ?>#products"
         >
 
             <div class="admin-filter-chips">
@@ -1118,6 +1140,28 @@ if ($categoryId) {
 
                 </a>
 
+                <a
+                    href="<?= htmlspecialchars(
+                        build_admin_filter_url(
+                            $currentFilters,
+                            ['status' => 'inactive']
+                        )
+                    ) ?>"
+                    class="admin-filter-chip <?= $status === 'inactive'
+                        ? 'active'
+                        : '' ?>"
+                >
+
+                    <span>
+                        Inactive
+                    </span>
+
+                    <span class="filter-count">
+                        <?= $inactiveProducts ?>
+                    </span>
+
+                </a>
+
             </div>
 
 
@@ -1137,7 +1181,7 @@ if ($categoryId) {
             <select
                 name="category"
                 aria-label="Filter by category"
-                onchange="this.form.submit()"
+                data-auto-submit
             >
 
                 <option value="">
@@ -1166,7 +1210,7 @@ if ($categoryId) {
             <select
                 name="sort"
                 aria-label="Sort products"
-                onchange="this.form.submit()"
+                data-auto-submit
             >
 
                 <option
@@ -1264,7 +1308,7 @@ if ($categoryId) {
                 <?php if ($hasActiveFilters): ?>
 
                     <a
-                        href="/product-catalog/admin/#products"
+                        href="<?= url('admin/') ?>#products"
                         class="clear-search"
                     >
                         Clear
@@ -1344,6 +1388,8 @@ if ($categoryId) {
 
                                 'out-of-stock' =>
                                     'Out of Stock',
+                                'inactive' =>
+                                    'Inactive',
 
                                 default =>
                                     $status,
@@ -1504,7 +1550,7 @@ if ($categoryId) {
 
 
                             <a
-                                href="/product-catalog/edit.php?id=<?= (int) $lowStockProduct['id'] ?>&return=<?= urlencode($returnUrl) ?>"
+                                href="<?= url('edit.php') ?>?id=<?= (int) $lowStockProduct['id'] ?>&return=<?= urlencode($returnUrl) ?>"
                                 class="button-secondary"
                             >
                                 Update Stock
@@ -1543,8 +1589,9 @@ if ($categoryId) {
                             $search
                         ) ?></strong>".
 
+                    <?php elseif ($status === 'inactive'): ?>
+                        There are no inactive products.
                     <?php elseif ($status === 'featured'): ?>
-
                         There are no featured products.
 
                     <?php elseif ($status === 'standard'): ?>
@@ -1587,7 +1634,7 @@ if ($categoryId) {
                 <?php if ($hasActiveFilters): ?>
 
                     <a
-                        href="/product-catalog/admin/#products"
+                        href="<?= url('admin/') ?>#products"
                         class="empty-button"
                     >
                         Clear filters
@@ -1631,14 +1678,13 @@ if ($categoryId) {
                                 <td>
 
                                     <a
-                                        href="/product-catalog/product.php?id=<?= (int) $product['id'] ?>"
+                                        href="<?= url('product.php') ?>?id=<?= (int) $product['id'] ?>"
                                         class="admin-table-product admin-table-product-link"
                                     >
 
                                         <img
                                             src="<?= htmlspecialchars(
-                                                $product['image_url']
-                                                ?: 'https://placehold.co/100x75?text=No+Image'
+                                                product_image_url($product['image_url'])
                                             ) ?>"
                                             alt="<?= htmlspecialchars(
                                                 $product['name']
@@ -1806,6 +1852,20 @@ if ($categoryId) {
 
                                     <?php endif; ?>
 
+                                    <?php if ((int) $product['is_active'] === 0): ?>
+                                        <a
+                                            href="<?= htmlspecialchars(
+                                                build_admin_filter_url(
+                                                    $currentFilters,
+                                                    ['status' => 'inactive']
+                                                )
+                                            ) ?>"
+                                            class="badge badge-inactive admin-status-link"
+                                        >
+                                            Inactive
+                                        </a>
+                                    <?php endif; ?>
+
                                 </td>
 
 
@@ -1853,14 +1913,14 @@ if ($categoryId) {
                                             <div class="admin-actions-dropdown">
 
                                                 <a
-                                                    href="/product-catalog/product.php?id=<?= (int) $product['id'] ?>"
+                                                    href="<?= url('product.php') ?>?id=<?= (int) $product['id'] ?>"
                                                 >
                                                     View
                                                 </a>
 
 
                                                 <a
-                                                    href="/product-catalog/edit.php?id=<?= (int) $product['id'] ?>&return=<?= urlencode($returnUrl) ?>"
+                                                    href="<?= url('edit.php') ?>?id=<?= (int) $product['id'] ?>&return=<?= urlencode($returnUrl) ?>"
                                                 >
                                                     Edit
                                                 </a>
@@ -1868,8 +1928,8 @@ if ($categoryId) {
 
                                                 <form
                                                     method="post"
-                                                    action="/product-catalog/delete.php"
-                                                    onsubmit="return confirm('Are you sure you want to delete this product?');"
+                                                    action="<?= url('delete.php') ?>"
+                                                    data-confirm="Are you sure you want to delete this product?"
                                                 >
 
                                                     <input
@@ -1946,7 +2006,7 @@ if ($categoryId) {
 
 
             <a
-                href="/product-catalog/admin/#products"
+                href="<?= url('admin/') ?>#products"
                 class="recent-activity-link"
             >
                 View all products →
@@ -1979,14 +2039,13 @@ if ($categoryId) {
                 <?php foreach ($recentProducts as $product): ?>
 
                     <a
-                        href="/product-catalog/product.php?id=<?= (int) $product['id'] ?>"
+                        href="<?= url('product.php') ?>?id=<?= (int) $product['id'] ?>"
                         class="recent-activity-row"
                     >
 
                         <img
                             src="<?= htmlspecialchars(
-                                $product['image_url']
-                                ?: 'https://placehold.co/160x120?text=No+Image'
+                                product_image_url($product['image_url'])
                             ) ?>"
                             alt="<?= htmlspecialchars(
                                 $product['name']
