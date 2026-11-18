@@ -1,113 +1,192 @@
-# FixerUpper
 
-FixerUpper is a demonstration hardware and home improvement store, built with
-PHP, MySQL, HTML, CSS and JavaScript for the FdSc Computing module CMP214
-(Secure Website Development). No real orders are fulfilled and no payments are
-taken or stored.
+# 🔧 FixerUpper — Secure E-Commerce Web Application
 
-## Features
+A responsive e-commerce demonstration application developed using PHP, MySQL, JavaScript, HTML and CSS.
 
-- Product catalogue with departments, search, sorting and stock levels
-- Guest shopping cart: add, update and remove items
-- Customer registration, login, logout and order history
-- Checkout for collection (free) or delivery (£4.99), with order confirmation
-- Administrator area for products, categories and stock
+Built as part of the **CMP214 Secure Website Development** module during my FdSc Computing studies.
 
-## Security
+The project demonstrates full-stack web development, customer authentication, product management, order processing and secure coding practices.
 
-- Passwords hashed with `password_hash()`; 12 character minimum and a 72 byte limit
-- Prepared statements (PDO) for all database queries
-- Output escaping with `htmlspecialchars()`
-- CSRF tokens on every form that changes data
-- Hardened session cookies, session ID regeneration, and idle and absolute timeouts
-- Login throttling per email address and per IP address
-- Role checks against the database on protected pages
-- Orders placed in one transaction, with row locks and integer pence arithmetic
-- One-time checkout tokens to prevent duplicate orders
-- Order pages restricted to the customer who placed the order
-- Apache rules blocking internal files and folder listings
-- Security headers, including a strict Content Security Policy
-- Generic public error pages, with details written to the server log only
-- Products can be withdrawn from sale (`is_active`) without affecting past orders
+> **Disclaimer:** This is an educational demonstration store. No real payments are processed or orders fulfilled.
 
-## Installation (MAMP for Mac)
+---
 
-1. Place the application folder inside MAMP's `htdocs` directory, so that it is at
-   `/Applications/MAMP/htdocs/fixerupper-summative`. **The folder must be named
-   exactly `fixerupper-summative`** (not, for example, `fixerupper-summative-main` or
-   `fixerupper-summative 2`), because page links, the session cookie and the product
-   image paths stored in the database all use this name. If the folder is renamed or
-   placed inside another folder, pages and images will not load correctly.
-2. Start MAMP, then import **`database/install.sql`**. This is the only SQL file
-   needed for a fresh installation. It creates the `fixerupper_summative` database,
-   all tables and the catalogue, and uses no other database. In phpMyAdmin, use the
-   Import tab with no database selected.
-3. Copy `config/db.example.php` to `config/db.php` and enter your database username
-   and password (on a default MAMP installation, both are `root`). The file already
-   has MAMP's port, 8889; if your MySQL uses another port, change `DB_PORT`.
-   `config/db.php` is ignored by Git.
-4. Open `http://localhost:8888/fixerupper-summative/`.
+## 📸 Project Screenshots
 
-### Trying the site
+### Homepage
 
-- **Customers:** add products to the cart as a guest, then register when you reach
-  checkout. No accounts are included.
-- **Administrator (optional):** no administrator account is included, so that no
-  password is stored in the project. To create your own:
-  1. In Terminal, create a hash of a password you choose:
-     ```
-     /Applications/MAMP/bin/php/php8.3.30/bin/php -r "echo password_hash('your-password', PASSWORD_DEFAULT), PHP_EOL;"
-     ```
-     (Use whichever PHP version your MAMP has, under `/Applications/MAMP/bin/php/`.)
-  2. In phpMyAdmin, select `fixerupper_summative`, open the SQL tab and run this,
-     pasting the hash in:
-     ```sql
-     INSERT INTO users (name, email, password, role)
-     VALUES ('Admin', 'admin@example.com', 'PASTE-THE-HASH-HERE', 'admin');
-     ```
-  3. Sign in at `http://localhost:8888/fixerupper-summative/admin/login.php`.
+![FixerUpper Homepage](screenshots/01-homepage.png)
 
-### Database files
+### Product Catalogue
 
-The submitted package contains one SQL file:
+![Product Catalogue](screenshots/02-product-catalog.png)
 
-| File | Purpose |
-|---|---|
-| `database/install.sql` | Creates the complete database for a fresh installation. **Required.** |
+### Shopping Cart
 
-The project's development history is kept in its Git repository. This history
-includes the earlier schema versions, the migrations that upgraded the original
-database step by step, and their rollback scripts. These files are **intentionally
-excluded from the Turnitin ZIP**. They are not needed to install or run the site,
-because `database/install.sql` already contains their final result. Do not import
-them into a fresh installation.
+![Shopping Cart](screenshots/03-shopping-cart.png)
 
-### HTTPS in production
+### Administration Dashboard
 
-This project runs on plain HTTP on localhost. On a public server:
+![Admin Dashboard](screenshots/04-admin-dashboard.png)
 
-- Serve the whole site over HTTPS. The session cookie then gets the `Secure` flag
-  and the `Strict-Transport-Security` header is sent automatically, because PHP
-  sees `$_SERVER['HTTPS']`. Behind a proxy or load balancer, make sure that value
-  is set correctly.
-- Redirect all HTTP requests to HTTPS.
-- Set `display_errors = Off` and `expose_php = Off` in `php.ini`, and
-  `ServerTokens Prod` in the Apache configuration.
-- Use a dedicated database user with only the permissions the site needs, not `root`.
+---
 
-## Project structure
+## 🚀 Features
 
-```text
-admin/        Administrator pages
-assets/       Stylesheets, JavaScript and site images
-config/       Application settings and database connection
-database/     install.sql for a fresh installation (not accessible over the web)
-includes/     Shared PHP: sessions, authentication, orders, helpers, templates
-uploads/      Product images
+### Customer Features
+
+- Responsive product catalogue
+- Product search, category filtering and sorting
+- Product details and stock availability
+- Shopping cart with quantity management
+- Customer registration and login
+- Checkout with collection and delivery options
+- Order confirmation and reference generation
+- Customer order history
+
+### Administration Features
+
+- Separate administrator login
+- Dashboard with inventory statistics
+- Add, edit and delete products
+- Product category management
+- Stock and availability tracking
+- Featured product management
+- Product image management
+
+---
+
+## 🔐 Security Features
+
+The application implements several security measures, including:
+
+- PDO prepared statements for database operations
+- Password hashing and verification
+- CSRF protection for applicable forms
+- Server-side input validation
+- Role-based access control
+- Session management
+- Restricted access to sensitive directories
+- Generic user-facing error messages
+- Local database credentials excluded from Git
+
+These measures demonstrate secure development practices. They do not constitute an independent security audit.
+
+---
+
+## 🛠️ Tech Stack
+
+| Technology | Purpose |
+|------------|---------|
+| PHP | Server-side application logic |
+| MySQL | Relational database |
+| PDO | Secure database interactions |
+| JavaScript | Client-side functionality |
+| HTML5 | Page structure |
+| CSS3 | Responsive interface |
+| Apache / MAMP | Local development environment |
+| Git & GitHub | Version control |
+
+---
+
+## 💻 Local Installation
+
+### Requirements
+
+- PHP with PDO MySQL support
+- MySQL
+- Apache or a compatible PHP web server
+- MAMP or an equivalent local environment
+
+### Installation Steps
+
+1. Clone the repository:
+
+```bash
+git clone https://github.com/ben-ekay/fixerupper-secure-store.git
 ```
 
-## Image credits
+2. Place the project in your local server's document root, or configure a symbolic link.
 
-The eight product images are AI-generated illustrations made for this project. They
-are not photographs of real stock and show no real brand. They are listed on the
-site's Image credits page (`image-credits.php`).
+3. Copy the database configuration template:
+
+```bash
+cp config/db.example.php config/db.php
+```
+
+4. Edit `config/db.php` with your local MySQL credentials.
+
+5. Import `database/install.sql` into MySQL using phpMyAdmin or the MySQL command-line client.
+
+6. Start your local Apache and MySQL servers.
+
+7. Open the project through your configured localhost address.
+
+For the default MAMP Apache port and the project folder name used during development:
+
+```text
+http://localhost:8888/fixerupper-secure-store/
+```
+
+The installer creates a demonstration database named `fixerupper_summative`.
+
+Administrator credentials must be configured locally. No production credentials are included in the repository.
+
+---
+
+## 🧪 Functional Testing
+
+The following workflows were manually tested in a local MAMP environment:
+
+| Functionality | Result |
+|---------------|--------|
+| Homepage and product catalogue | Passed |
+| Product details and shopping cart | Passed |
+| Customer registration | Passed |
+| Checkout and order confirmation | Passed |
+| Customer order history | Passed |
+| Administrator login | Passed |
+| Administration dashboard | Passed |
+| Create product | Passed |
+| Update product | Passed |
+| Delete product | Passed |
+| PHP syntax checks | Passed |
+
+Additional automated and security testing would be required before production deployment.
+
+---
+
+## 📚 Learning Outcomes
+
+Through this project, I developed practical experience in:
+
+- Building dynamic applications with PHP and MySQL
+- Designing relational database-backed workflows
+- Implementing customer and administrator authentication
+- Applying secure coding principles
+- Developing CRUD functionality
+- Managing sessions and user roles
+- Testing and debugging web applications
+- Using Git branches and pull requests
+
+---
+
+## 🎯 Project Status
+
+**Academic project — functional local demonstration**
+
+Developed and tested locally as part of CMP214 Secure Website Development.
+
+This application is intended for educational and portfolio purposes, not production commercial use.
+
+---
+
+## 👨‍💻 Author
+
+**Benjamin Ekay**
+
+FdSc Computing Student | Aspiring Software Developer
+
+London, United Kingdom
+
+[GitHub Profile](https://github.com/ben-ekay)
